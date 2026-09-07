@@ -63,7 +63,8 @@ h1,h2,h3{margin:0; font-weight:700}
 .cd.rose{background:var(--rose-soft); color:var(--rose)} .cd.gold{background:var(--gold-soft); color:#7a5d13} .cd.sage{background:var(--sage-soft); color:var(--sage)}
 .cd .lbl{font-size:11px; opacity:.85}
 @media (max-width:900px){.cd .lbl{display:none}}
-@media (max-width:480px){.brand-name{font-size:19px} .cd{padding:3px 7px; font-size:11px} .cd .ic{display:none}}
+.cd .short{display:none}
+@media (max-width:520px){.brand-name{font-size:19px} #top{gap:8px; padding:0 10px} .cd{padding:3px 7px; font-size:11px; gap:3px} .cd .full{display:none} .cd .short{display:inline} .who-chip{padding:4px 9px} .status{display:none}}
 .spacer{flex:1}
 .status{width:9px; height:9px; border-radius:50%; background:var(--ink-faint)}
 .status.ok{background:var(--sage)} .status.local{background:var(--gold)} .status.err{background:var(--danger)}

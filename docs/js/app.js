@@ -77,10 +77,11 @@ async function start(auth){
 function renderCountdown(){
   const el = document.getElementById("countdown"); el.innerHTML = "";
   const w = daysUntil(WEDDING_DATE), b = daysUntil(BACHELOR_DATE);
-  el.append(pill("rose", "💍", w > 1 ? `${w} days` : w === 1 ? "Tomorrow!" : w === 0 ? "Today!" : "Married!", "to the wedding"));
-  if (b >= 0) el.append(pill("gold", "🎉", b > 1 ? `${b} days` : b === 1 ? "Tomorrow!" : "Today!", "to the bachelor trip"));
+  const days = n => n > 1 ? [`${n} days`, `${n}d`] : n === 1 ? ["Tomorrow!","1d"] : n === 0 ? ["Today!","today"] : ["Married!","💒"];
+  el.append(pill("rose", "💍", ...days(w), "to the wedding"));
+  if (b >= 0) el.append(pill("gold", "🎉", ...days(b), "to the bachelor trip"));
   const wk = weekendsLeft();
-  if (w > 0) el.append(pill("sage", "📅", `${wk} weekend${wk===1?"":"s"}`, "before the wedding weekend"));
+  if (w > 0) el.append(pill("sage", "📅", `${wk} weekend${wk===1?"":"s"}`, `${wk} wknd`, "before the wedding weekend"));
 }
 /* Saturdays from today (inclusive) up to but not including the wedding Saturday. */
 function weekendsLeft(){
@@ -88,7 +89,7 @@ function weekendsLeft(){
   for (; d < end; d.setDate(d.getDate()+1)) if (d.getDay() === 6) n++;
   return n;
 }
-function pill(tone, icon, big, small){ return h("span",{class:"cd "+tone, title:small}, h("span",{class:"ic"},icon), h("b",null,big), h("span",{class:"lbl"}," "+small)); }
+function pill(tone, icon, big, short, small){ return h("span",{class:"cd "+tone, title:`${big} ${small}`}, h("span",{class:"ic"},icon), h("b",{class:"full"},big), h("b",{class:"short"},short), h("span",{class:"lbl"}," "+small)); }
 
 /* ---------- router ---------- */
 let current = null, currentMod = null;
