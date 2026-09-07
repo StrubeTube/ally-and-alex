@@ -5,7 +5,7 @@
 import { firebaseConfig } from "./config.js";
 import * as SEED from "../data/seed.js";
 
-export const COLLECTIONS = ["tasks","guests","seats","songs","payments","vendors","timeline","hmu","roles","processional","flow","party","settings","activity"];
+export const COLLECTIONS = ["tasks","guests","seats","charts","songs","payments","vendors","timeline","hmu","roles","processional","flow","party","settings","activity"];
 
 let adapter = null;
 const listeners = {};       // collection -> Set(cb)
@@ -48,9 +48,9 @@ function seedDocs(){
   push("flow", SEED.EVENT_FLOW);
   push("party", SEED.PARTY);
   push("songs", SEED.MUSIC_SEED);
-  for (const [gid, seat] of Object.entries(SEED.SEATS_SEED)) docs.push(["seats", gid, {id: gid, seat}]);
+  docs.push(["charts", "c1", {id:"c1", name:"Seating Chart 1", names:{}, order:0}]);
+  for (const [gid, seat] of Object.entries(SEED.SEATS_SEED)) docs.push(["seats", "c1__"+gid, {id:"c1__"+gid, chart:"c1", guest:gid, seat}]);
   docs.push(["settings", "meta", {id:"meta", seedVersion: SEED.SEED_VERSION, seededAt: Date.now()}]);
-  docs.push(["settings", "tables", {id:"tables", names:{}}]);
   return docs;
 }
 
@@ -104,8 +104,25 @@ const fsAdapter = {
       }
     }
     // preload the collections everything depends on
-    await Promise.all(["tasks","guests","seats","settings"].map(c=>this.ensure(c, true)));
+    await Promise.all(["tasks","guests","seats","charts","settings"].map(c=>this.ensure(c, true)));
+    await this.migrate();
     store.onStatus("ok");
+  },
+  /* One-time upgrades of data seeded by an older version of the site. */
+  async migrate(){
+    const fs = this.fs;
+    // v2: multiple seating charts. Legacy seats/{guestId} -> seats/c1__{guestId} + charts/c1
+    if (!cache.charts.size){
+      const names = cache.settings.get("tables")?.names || {};
+      const b = fs.writeBatch(this.db);
+      b.set(this.ref("charts","c1"), {name:"Seating Chart 1", names, order:0});
+      for (const d of [...cache.seats.values()]){
+        if (d.chart) continue;
+        b.set(this.ref("seats","c1__"+d.id), {chart:"c1", guest:d.id, seat:d.seat});
+        b.delete(this.ref("seats", d.id));
+      }
+      await b.commit();
+    }
   },
   ensure(c, wait){
     if (this.subs[c]) return this.subs[c].first;
@@ -126,6 +143,13 @@ const fsAdapter = {
   async update(c, id, patch){ const cur = cache[c].get(id)||{id}; cache[c].set(id, {...cur, ...patch, id}); emit(c); await this.fs.setDoc(this.ref(c,id), patch, {merge:true}); },
   async remove(c, id){ cache[c].delete(id); emit(c); await this.fs.deleteDoc(this.ref(c,id)); },
 };
+
+/* ---------------- seating helpers ---------------- */
+/* Legacy seat docs (before multiple charts) were seats/{guestId} with no chart field. */
+export function normSeat(d){ return {chart: d.chart || "c1", guest: d.guest || d.id, seat: d.seat}; }
+export function chartsSorted(){ const c = store.get("charts"); return c.length ? c : [{id:"c1", name:"Seating Chart 1", names:{}, order:0}]; }
+export function primaryChart(){ return chartsSorted()[0]; }
+export function seatMap(chartId){ const m = {}; for (const d of store.get("seats")){ const n = normSeat(d); if (n.chart===chartId && n.seat) m[n.guest] = n.seat; } return m; }
 
 /* ---------------- boot ---------------- */
 export async function sha256hex(s){

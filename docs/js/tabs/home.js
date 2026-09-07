@@ -1,4 +1,4 @@
-import { store } from "../store.js";
+import { store, seatMap, primaryChart } from "../store.js";
 import { h, today, addDays, mondayOf, daysUntil, fmt, relDay, ago, money, WEDDING } from "../util.js";
 import { MUSIC_SECTIONS } from "../../data/seed.js";
 
@@ -7,7 +7,7 @@ export function mount(view){
   root = h("div",{class:"page"});
   view.append(root);
   const rerender = ()=>render();
-  for (const c of ["tasks","payments","seats","guests","songs","activity"]) unsubs.push(store.subscribe(c, rerender));
+  for (const c of ["tasks","payments","seats","charts","guests","songs","activity"]) unsubs.push(store.subscribe(c, rerender));
 }
 export function unmount(){ unsubs.forEach(u=>u()); unsubs = []; }
 
@@ -22,7 +22,7 @@ function render(){
   const done = tasks.filter(t=>t.status==="done").length;
   const pays = store.get("payments").filter(p=>!p.paid && p.amount);
   const soon = pays.filter(p=>p.amount>0 && p.due && daysUntil(p.due) <= 14).sort((a,b)=>a.due.localeCompare(b.due));
-  const guests = store.get("guests"), seats = store.get("seats").filter(s=>s.seat);
+  const guests = store.get("guests"), seats = Object.keys(seatMap(primaryChart().id));
   const songs = store.get("songs").filter(s=>s.status==="pick");
   const anchors = MUSIC_SECTIONS.flatMap(s=>s.slots.filter(x=>!x.multi).map(x=>x.id));
   const anchorsDone = anchors.filter(a=>songs.some(s=>s.slot===a)).length;
@@ -36,7 +36,7 @@ function render(){
     h("div",{class:"kpis"},
       kpi(open.length, "open tasks", `${done} done · ${overdue.length} overdue`),
       kpi(mine.length, `for ${store.who}`, "or both of you"),
-      kpi(`${seats.length}/${guests.length}`, "seated", `${guests.length-seats.length} to place`),
+      kpi(`${seats.length}/${guests.length}`, "seated", `${guests.length-seats.length} to place · ${primaryChart().name}`),
       kpi(`${anchorsDone}/${anchors.length}`, "anchor songs", `${songs.length} picks total`),
       kpi(money(pays.reduce((a,p)=>a+p.amount,0)), "still to pay", `${soon.length} due in 14 days`),
     ),

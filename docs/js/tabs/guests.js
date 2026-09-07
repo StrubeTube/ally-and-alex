@@ -1,30 +1,30 @@
-import { store } from "../store.js";
+import { store, seatMap, primaryChart } from "../store.js";
 import { h, modal, confirmBox, toast } from "../util.js";
 import { COLORS, GROUPS, TABLES } from "../../data/seed.js";
 
 let unsubs = [], root, q = "";
 export function mount(view){
   root = h("div",{class:"page"}); view.append(root);
-  unsubs.push(store.subscribe("guests", render), store.subscribe("seats", render), store.subscribe("settings", render));
+  unsubs.push(store.subscribe("guests", render), store.subscribe("seats", render), store.subscribe("charts", render));
 }
 export function unmount(){ unsubs.forEach(u=>u()); unsubs = []; }
 
 function seatLabel(seat){
   if (!seat) return "";
   const tid = seat.split("-").slice(0,-1).join("-");
-  const names = store.getOne("settings","tables")?.names || {};
+  const names = primaryChart().names || {};
   const t = TABLES.find(x=>x.id===tid);
   return names[tid] || t?.label || tid;
 }
 
 function render(){
   const guests = store.get("guests");
-  const seats = Object.fromEntries(store.get("seats").map(s=>[s.id, s.seat]));
+  const seats = seatMap(primaryChart().id);
   const seated = guests.filter(g=>seats[g.id]).length;
   const cap = TABLES.reduce((a,t)=>a + t.perSide*2 + (t.ends?2:0), 0);
   root.innerHTML = "";
   root.append(
-    h("div",{class:"page-head"}, h("h1",null,"Guests"), h("span",{class:"sub"}, `${guests.length} people · ${seated} seated · ${cap} seats on the floor`)),
+    h("div",{class:"page-head"}, h("h1",null,"Guests"), h("span",{class:"sub"}, `${guests.length} people · ${seated} seated in ${primaryChart().name} · ${cap} seats on the floor`)),
     h("div",{class:"filters"},
       h("input",{class:"input", style:"max-width:260px", placeholder:"Find a guest…", value:q, onInput:e=>{ q=e.target.value; render(); }}),
       h("span",{class:"grow"}),
@@ -53,7 +53,7 @@ async function editGuest(g){
       {name:"color", label:"Color", type:"select", options:Object.entries(COLORS).map(([k,c])=>({value:k,label:c.label})), value:"black"},
     ],
     values:g, submit: g?"Save":"Add", danger: g?"Remove":null,
-    onDanger: async ()=>{ if (await confirmBox(`Remove ${g.name} from the guest list?`)){ await store.remove("guests", g.id, `removed ${g.name} from the guest list`); await store.remove("seats", g.id); } },
+    onDanger: async ()=>{ if (await confirmBox(`Remove ${g.name} from the guest list?`)){ await store.remove("guests", g.id, `removed ${g.name} from the guest list`); for (const d of store.get("seats")) if ((d.guest||d.id)===g.id) await store.remove("seats", d.id); } },
   });
   if (!r || !r.name.trim()) return;
   r.name = r.name.trim(); r.short = (r.short||"").trim() || r.name.split(" ")[0];

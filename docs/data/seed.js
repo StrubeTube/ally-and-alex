@@ -2,7 +2,8 @@
    the site is opened. Everything here came from the couple's spreadsheets
    (Wedding Planning.xlsx, WEDDING MASTER CHECKLIST.xlsx) and the venue sketch. */
 
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
+export const BACHELOR_DATE = "2026-09-17";
 export const WEDDING_DATE = "2026-10-10";
 
 /* ---------------- guests ---------------- */
@@ -15,7 +16,7 @@ export const COLORS = {
   yellow:  {bg:"#e6c412", fg:"#3b3305", label:"Alex · Grandma's side"},
   green:   {bg:"#43a24b", fg:"#fff", label:"Alex · aunts, uncles, cousins"},
   teal:    {bg:"#177e95", fg:"#fff", label:"Alex · Cherry & David"},
-  plain:   {bg:"#b9b2a6", fg:"#2a2723", label:"Added later / tentative"},
+  plain:   {bg:"#b9b2a6", fg:"#2a2723", label:"Other"},
   black:   {bg:"#26292c", fg:"#fff", label:"Friends"},
 };
 function g(id, name, group, color, short){ return {id, name, group, color, short: short || name}; }
@@ -33,8 +34,6 @@ export const GUESTS = [
   g("peters-gf","Peter's GF","ally","cyan","Peter GF"),
   g("glenn","Glenn","ally","magenta"), g("marlo","Marlo","ally","magenta"),
   g("uschi","Uschi","ally","magenta"), g("martin","Martin","ally","magenta"),
-  g("ricky","Ricky","ally","plain"), g("tricia","Tricia","ally","plain"),
-  g("dee-a","Dee (Ally side)","ally","plain","Dee"), g("sherri","Sherri","ally","plain"),
 
   g("x-mom","Mom (Alex)","alex","grey","Mom"), g("x-dad","Dad (Alex)","alex","grey","Dad"),
   g("ellie","Ellie","alex","grey"), g("faye","Faye","alex","grey"),
@@ -54,8 +53,6 @@ export const GUESTS = [
   g("penny-2","Penny (2)","alex","magenta","Penny 2"), g("sadie","Sadie","alex","magenta"),
   g("ruby","Ruby","alex","magenta"), g("adam-x","Adam (Alex side)","alex","magenta","Adam"),
   g("will","Will","alex","magenta"),
-  g("diana","Diana","alex","plain"), g("diana-plus","Diana's plus one","alex","plain","Diana +1"),
-  g("daniel","Daniel","alex","plain"),
 
   g("mg","MG","friends","black"), g("emily","Emily","friends","black"), g("evan","Evan","friends","black"),
   g("katie","Katie","friends","black"), g("ted","Ted","friends","black"), g("delaney","Delaney","friends","black"),
@@ -74,11 +71,6 @@ export const GUESTS = [
   g("nick-gf","Nick's GF","friends","black","Nick GF"),
   g("evans-mom","Evan's Mom","friends","black","Evan Mom"),
   g("evans-dad","Evan's Dad","friends","black","Evan Dad"),
-  g("blake-johnson","Blake Johnson","friends","plain","Blake"),
-  g("chris-taylor","Chris Taylor","friends","plain","Chris T."),
-  g("riley","Riley","friends","plain"), g("jack","Jack","friends","plain"),
-  g("tommy-floegel","Tommy Floegel","friends","plain","Tommy F."),
-  g("tommy-gf","Tommy F's GF","friends","plain","Tommy GF"),
 ].map((x,i)=>({...x, order:i}));
 
 export const GROUPS = [

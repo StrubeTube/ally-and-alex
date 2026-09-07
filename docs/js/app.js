@@ -1,6 +1,7 @@
 import { store, boot, sha256hex } from "./store.js";
 import { SPACE_HASH, firebaseConfig } from "./config.js";
-import { h, daysUntil, today, toast } from "./util.js";
+import { h, daysUntil, today, toast, parse, ymd } from "./util.js";
+import { BACHELOR_DATE, WEDDING_DATE } from "../data/seed.js";
 
 const TABS = {
   home: ()=>import("./tabs/home.js"),
@@ -74,9 +75,20 @@ async function start(auth){
 }
 
 function renderCountdown(){
-  const n = daysUntil("2026-10-10");
-  document.getElementById("countdown").textContent = n > 1 ? `${n} days` : n === 1 ? "Tomorrow!" : n === 0 ? "Today!" : "Married!";
+  const el = document.getElementById("countdown"); el.innerHTML = "";
+  const w = daysUntil(WEDDING_DATE), b = daysUntil(BACHELOR_DATE);
+  el.append(pill("rose", "💍", w > 1 ? `${w} days` : w === 1 ? "Tomorrow!" : w === 0 ? "Today!" : "Married!", "to the wedding"));
+  if (b >= 0) el.append(pill("gold", "🎉", b > 1 ? `${b} days` : b === 1 ? "Tomorrow!" : "Today!", "to the bachelor trip"));
+  const wk = weekendsLeft();
+  if (w > 0) el.append(pill("sage", "📅", `${wk} weekend${wk===1?"":"s"}`, "before the wedding weekend"));
 }
+/* Saturdays from today (inclusive) up to but not including the wedding Saturday. */
+function weekendsLeft(){
+  let n = 0; const d = parse(today()), end = parse(WEDDING_DATE);
+  for (; d < end; d.setDate(d.getDate()+1)) if (d.getDay() === 6) n++;
+  return n;
+}
+function pill(tone, icon, big, small){ return h("span",{class:"cd "+tone, title:small}, h("span",{class:"ic"},icon), h("b",null,big), h("span",{class:"lbl"}," "+small)); }
 
 /* ---------- router ---------- */
 let current = null, currentMod = null;
