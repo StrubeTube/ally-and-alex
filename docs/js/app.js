@@ -13,6 +13,7 @@ const TABS = {
   timeline: ()=>import("./tabs/timeline.js"),
   vendors: ()=>import("./tabs/vendors.js"),
   ceremony: ()=>import("./tabs/ceremony.js"),
+  honeymoon: ()=>import("./tabs/honeymoon.js"),
 };
 
 const AUTH = "ally-alex-auth-v1";

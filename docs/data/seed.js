@@ -396,3 +396,41 @@ export const MUSIC_SEED = [
   m("last-dance","Don't Stop Believin'","Journey","catalog"), m("last-dance","Piano Man","Billy Joel","catalog"), m("last-dance","All You Need Is Love","The Beatles","catalog"), m("last-dance","Closing Time","Semisonic","catalog"),
   m("sendoff","Home","Edward Sharpe & The Magnetic Zeros","catalog"), m("sendoff","I Gotta Feeling","Black Eyed Peas","catalog"), m("sendoff","Sweet Caroline","Neil Diamond","catalog"),
 ].map((x,i)=>({...x, id:"song-"+String(i+1).padStart(3,"0"), order:i}));
+
+/* ---------------- honeymoon (Greece, Oct 11–23) ---------------- */
+export const TRIP_START = "2026-10-11", TRIP_END = "2026-10-23";
+export const STOPS = [
+  {id:"fly-out", name:"Fly out", arrive:"Raleigh → Athens", emoji:"🛫", color:"#7a8aa0", from:"2026-10-11", to:"2026-10-11", nights:0},
+  {id:"ath1", name:"Athens", arrive:"Land in Athens", emoji:"🏛️", color:"#b5544d", from:"2026-10-12", to:"2026-10-12", nights:1},
+  {id:"jtr", name:"Santorini", arrive:"Fly to Santorini", emoji:"🌅", color:"#2f6f9f", from:"2026-10-13", to:"2026-10-17", nights:5},
+  {id:"chq", name:"Chania, Crete", arrive:"Fly to Chania", emoji:"🏖️", color:"#5f7a63", from:"2026-10-18", to:"2026-10-21", nights:4},
+  {id:"ath2", name:"Athens", arrive:"Back to Athens", emoji:"🏛️", color:"#a8842c", from:"2026-10-22", to:"2026-10-22", nights:1},
+  {id:"home", name:"Fly home", arrive:"Athens → Raleigh", emoji:"🛬", color:"#7a8aa0", from:"2026-10-23", to:"2026-10-23", nights:0},
+];
+function tr(date, stop, time, type, title, details, extra){ return {date, stop, time: time||"", type, title, details: details||"", conf:"", cost:0, link:"", status:"planned", ...(extra||{})}; }
+export const TRIP_SEED = [
+  tr("2026-10-11","fly-out","","flight","Raleigh (RDU) → Athens","Add the airline, flight numbers and departure time. Overnight flight."),
+  tr("2026-10-12","ath1","","flight","Land in Athens (ATH)","Add arrival time."),
+  tr("2026-10-12","ath1","","stay","Athens hotel · night 1","Not booked yet. Pick something central (Plaka / Koukaki) or near the airport depending on the Oct 13 flight time.",{status:"idea"}),
+  tr("2026-10-13","jtr","","flight","Athens → Santorini (JTR)","Add airline, flight number and time."),
+  tr("2026-10-13","jtr","","stay","Santorini hotel · Oct 13–18","Not on file yet. Add the booking when you have it.",{status:"idea"}),
+  tr("2026-10-18","chq","11:55","flight","Sky Express GQ 345 · Santorini → Athens","Lands 12:50. From your Google Calendar, shown in Greek local time. Double-check against the Sky Express email.",{status:"booked"}),
+  tr("2026-10-18","chq","13:30","flight","Sky Express GQ 252 · Athens → Chania (CHQ)","Lands 14:30. 40-minute connection in Athens.",{status:"booked"}),
+  tr("2026-10-18","chq","14:00","stay","Residenza Vranas Boutique Hotel · Oct 18–22","Superior Sea View Suite with heated plunge pool and balcony, 90 m², 1st floor over the Venetian harbour. Breakfast, bottle of wine, welcome dessert and parking included. Check-in 2 PM, check-out 11 AM. 26 Zampeliou Str, Old Town Chania · +30 28210 02933 · info@vranasresidenza.com. Free cancellation until 6 PM Sept 27; charged in full 21 days before arrival. Private parking 200 m away (reserve it).",{status:"booked", conf:"58683874", cost:2612, link:"https://vranasresidenza.com"}),
+  tr("2026-10-22","ath2","11:00","stay","Check out of Residenza Vranas","",{status:"booked"}),
+  tr("2026-10-22","ath2","","flight","Chania → Athens","Add airline, flight number and time."),
+  tr("2026-10-22","ath2","","stay","Athens hotel · last night","Not booked. The airport-side shortlist from the July email is in the Athens ideas below.",{status:"idea"}),
+  tr("2026-10-23","home","","flight","Athens → Raleigh","Add airline, flight numbers and time."),
+  tr(null,"ath2","","stay","Cubes On The Beach · Artemida","~€130–190 · 4.9★ (191 reviews). Six modern units on the sand, 15 min to ATH, kitchenette, tavernas walkable. Best price-to-rating on the list.",{status:"idea", link:"https://cubesonthebeach.com/"}),
+  tr(null,"ath2","","stay","Sofitel Athens Airport","~€280–380 · 4.5★. Walk across to the terminal, rooftop restaurant, soundproofed. Pure logistics, no honeymoon feel.",{status:"idea", link:"http://sofitel.accor.com/hotels/3167"}),
+  tr(null,"ath2","","stay","Airscape Hotel","~€70–100 · 4.6★. Free shuttle both directions, remote, no restaurant or beach.",{status:"idea", link:"https://airscape-hotel.com/"}),
+  tr(null,"ath2","","stay","Seasabelle","~€90–140 · 4.3★. Sea view, rooftop, 15 min to ATH. Ask for an upper floor.",{status:"idea", link:"https://www.seasabellehotel.gr/"}),
+  tr(null,"jtr","","activity","Sunset in Oia","Go early; the castle ruins fill up an hour before.",{status:"idea"}),
+  tr(null,"jtr","","activity","Catamaran day: hot springs, Red Beach, sunset dinner on board","Most run 5–6 hours with lunch or dinner included.",{status:"idea"}),
+  tr(null,"jtr","","activity","Wine tasting: Santo Wines or Venetsanos","Cliffside caldera views, Assyrtiko.",{status:"idea"}),
+  tr(null,"jtr","","activity","Fira → Oia caldera hike","About 10 km, 3–4 hours, start early or late afternoon.",{status:"idea"}),
+  tr(null,"chq","","activity","Balos lagoon + Gramvousa boat day","Ferry from Kissamos, about an hour from Chania.",{status:"idea"}),
+  tr(null,"chq","","activity","Elafonisi pink beach","Roughly 90 minutes by car from Chania.",{status:"idea"}),
+  tr(null,"chq","","activity","Samaria Gorge hike","16 km, full day. Season usually runs until late October; check it is still open.",{status:"idea"}),
+  tr(null,"chq","","food","Dinner in the Venetian harbour","Ask the hotel; you are 2 minutes from the water.",{status:"idea"}),
+].map((x,i)=>({...x, id:"trip-"+String(i+1).padStart(2,"0"), order:i}));

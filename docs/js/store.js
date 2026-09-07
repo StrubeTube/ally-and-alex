@@ -5,7 +5,7 @@
 import { firebaseConfig } from "./config.js";
 import * as SEED from "../data/seed.js";
 
-export const COLLECTIONS = ["tasks","guests","seats","charts","songs","payments","vendors","timeline","hmu","roles","processional","flow","party","settings","activity"];
+export const COLLECTIONS = ["tasks","guests","seats","charts","songs","payments","vendors","timeline","hmu","roles","processional","flow","party","trip","settings","activity"];
 
 let adapter = null;
 const listeners = {};       // collection -> Set(cb)
@@ -48,6 +48,7 @@ function seedDocs(){
   push("flow", SEED.EVENT_FLOW);
   push("party", SEED.PARTY);
   push("songs", SEED.MUSIC_SEED);
+  push("trip", SEED.TRIP_SEED);
   docs.push(["charts", "c1", {id:"c1", name:"Seating Chart 1", names:{}, order:0}]);
   for (const [gid, seat] of Object.entries(SEED.SEATS_SEED)) docs.push(["seats", "c1__"+gid, {id:"c1__"+gid, chart:"c1", guest:gid, seat}]);
   docs.push(["settings", "meta", {id:"meta", seedVersion: SEED.SEED_VERSION, seededAt: Date.now()}]);
@@ -104,7 +105,7 @@ const fsAdapter = {
       }
     }
     // preload the collections everything depends on
-    await Promise.all(["tasks","guests","seats","charts","settings"].map(c=>this.ensure(c, true)));
+    await Promise.all(["tasks","guests","seats","charts","trip","settings"].map(c=>this.ensure(c, true)));
     await this.migrate();
     store.onStatus("ok");
   },
@@ -121,6 +122,13 @@ const fsAdapter = {
         b.set(this.ref("seats","c1__"+d.id), {chart:"c1", guest:d.id, seat:d.seat});
         b.delete(this.ref("seats", d.id));
       }
+      await b.commit();
+    }
+    // v3: honeymoon planner. Seed the trip collection if it has never been written.
+    if (!cache.trip.size && !cache.settings.get("meta")?.tripSeeded){
+      const b = fs.writeBatch(this.db);
+      for (const d of SEED.TRIP_SEED) b.set(this.ref("trip", d.id), d);
+      b.set(this.ref("settings","meta"), {tripSeeded: Date.now()}, {merge:true});
       await b.commit();
     }
   },
