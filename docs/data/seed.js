@@ -400,12 +400,12 @@ export const MUSIC_SEED = [
 /* ---------------- honeymoon (Greece, Oct 11–23) ---------------- */
 export const TRIP_START = "2026-10-11", TRIP_END = "2026-10-23";
 export const STOPS = [
-  {id:"fly-out", name:"Fly out", arrive:"Raleigh → Athens", emoji:"🛫", color:"#7a8aa0", from:"2026-10-11", to:"2026-10-11", nights:0},
+  {id:"fly-out", name:"Fly out", arrive:"Charlotte → Athens", emoji:"🛫", color:"#7a8aa0", from:"2026-10-11", to:"2026-10-11", nights:0},
   {id:"ath1", name:"Athens", arrive:"Land in Athens", emoji:"🏛️", color:"#b5544d", from:"2026-10-12", to:"2026-10-12", nights:1},
   {id:"jtr", name:"Santorini", arrive:"Fly to Santorini", emoji:"🌅", color:"#2f6f9f", from:"2026-10-13", to:"2026-10-17", nights:5},
   {id:"chq", name:"Chania, Crete", arrive:"Fly to Chania", emoji:"🏖️", color:"#5f7a63", from:"2026-10-18", to:"2026-10-21", nights:4},
   {id:"ath2", name:"Athens", arrive:"Back to Athens", emoji:"🏛️", color:"#a8842c", from:"2026-10-22", to:"2026-10-22", nights:1},
-  {id:"home", name:"Fly home", arrive:"Athens → Raleigh", emoji:"🛬", color:"#7a8aa0", from:"2026-10-23", to:"2026-10-23", nights:0},
+  {id:"home", name:"Fly home", arrive:"Athens → Charlotte", emoji:"🛬", color:"#7a8aa0", from:"2026-10-23", to:"2026-10-23", nights:0},
 ];
 function tr(date, stop, time, type, title, details, extra){ return {date, stop, time: time||"", type, title, details: details||"", conf:"", cost:0, link:"", status:"planned", ...(extra||{})}; }
 export const TRIP_SEED = [
