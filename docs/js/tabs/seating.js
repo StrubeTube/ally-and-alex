@@ -4,6 +4,7 @@
 import { store, normSeat, chartsSorted } from "../store.js";
 import { h, toast, modal, confirmBox } from "../util.js";
 import { COLORS, GROUPS, TABLES, FLOOR } from "../../data/seed.js";
+import { editGuest } from "./guests.js";
 
 const W = FLOOR.w, H = FLOOR.h;
 const SEATS = [];
@@ -39,9 +40,9 @@ export function mount(view){
         h("div",{id:"placeBar"}, h("span",{class:"who", id:"placeWho"}), h("span",{class:"what"},"tap a seat · tap a person to swap"), h("button",{id:"unseatBtn"},"Back to list"), h("button",{id:"cancelBtn"},"✕")),
       ),
       h("aside",null,
-        h("div",{class:"tools"}, h("input",{id:"seatSearch", type:"search", placeholder:"Find a guest…"})),
+        h("div",{class:"tools"}, h("input",{id:"seatSearch", type:"search", placeholder:"Find a guest…"}), h("button",{class:"btn sm", title:"Add a guest", onClick:()=>editGuest()}, "+ Guest")),
         h("div",{id:"seatGroups"}),
-        h("div",{class:"hint"},"Tap a name, then tap a seat — or tap another person to swap. Drag works too. Double-click a table to rename it. Double-click a seated person to unseat them."),
+        h("div",{class:"hint"},"Tap a name, then tap a seat — or tap another person to swap. Drag works too. Double-click a table to rename it, a seated person to unseat them, or a name in this list to edit or remove them."),
       ),
     ),
   );
@@ -84,6 +85,7 @@ function renderTabs(){
   tabsEl.append(
     h("button",{class:"ctab add", onClick:newChart}, "+ New chart"),
     h("span",{class:"grow"}),
+    h("button",{class:"btn sm ghost danger", onClick:clearChart}, "Clear"),
     h("button",{class:"btn sm ghost", onClick:chartMenu}, "⋯"),
   );
 }
@@ -104,6 +106,15 @@ async function newChart(){
     await Promise.all(copies.map(s=>store.set("seats", `${id}__${s.guest}`, {chart:id, guest:s.guest, seat:s.seat})));
     toast(`Copied ${copies.length} seats from ${src.name}`);
   }
+}
+async function clearChart(){
+  const c = chart(); if (!c || !seats.size){ toast("Nothing to clear"); return; }
+  if (!(await confirmBox(`Clear all ${seats.size} placements from “${c.name}”? The guests stay; only their seats are removed.`))) return;
+  const ids = [...seats.keys()];
+  seats.clear(); select(null); render();
+  await Promise.all(ids.map(gid=>store.remove("seats", `${c.id}__${gid}`)));
+  store.log(`cleared ${ids.length} seats from “${c.name}”`, "seats");
+  toast("Cleared");
 }
 async function chartMenu(){
   const c = chart(); if (!c) return;
@@ -182,6 +193,7 @@ function buildBank(){
       const c = makeChip(g);
       c.addEventListener("pointerdown", e=>startDrag(e, g.id, true));
       c.addEventListener("click", e=>{ e.stopPropagation(); if (suppressClick) return; select(selectedId===g.id ? null : g.id); });
+      c.addEventListener("dblclick", e=>{ e.stopPropagation(); select(null); editGuest(g); });
       chips.append(c); bankChips[g.id] = c;
     }
     groupsEl.append(h("div",{class:"sgroup"}, h("h2",null, gr.title, cnt), chips));

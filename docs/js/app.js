@@ -8,7 +8,6 @@ const TABS = {
   planner: ()=>import("./tabs/planner.js"),
   seating: ()=>import("./tabs/seating.js"),
   music: ()=>import("./tabs/music.js"),
-  guests: ()=>import("./tabs/guests.js"),
   budget: ()=>import("./tabs/budget.js"),
   timeline: ()=>import("./tabs/timeline.js"),
   vendors: ()=>import("./tabs/vendors.js"),
