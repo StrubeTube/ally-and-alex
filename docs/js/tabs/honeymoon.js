@@ -1,6 +1,6 @@
 /* Honeymoon planner — Greece, Oct 11–23, 2026. Day-by-day itinerary with
    flights, stays, reservations, activities and per-stop idea buckets.
-   Items live in trip/{id} = {date|null, stop, time, type, title, details, conf, cost, link, status}. */
+   Items live in trip/{id} = {date|null, stop, time, type, title, details, conf, link, status}. */
 import { store } from "../store.js";
 import { h, fmt, parse, ymd, addDays, daysUntil, time12, money, modal, confirmBox, toast } from "../util.js";
 import { STOPS, TRIP_START, TRIP_END } from "../../data/seed.js";
@@ -26,14 +26,12 @@ function days(){
 }
 function stopFor(date){ return STOPS.find(s=>date>=s.from && date<=s.to) || STOPS[STOPS.length-1]; }
 function stopById(id){ return STOPS.find(s=>s.id===id); }
-function eur(n){ return n ? "€"+Number(n).toLocaleString("en-US",{maximumFractionDigits:0}) : ""; }
 
 function render(){
   const items = store.get("trip");
   const y = window.scrollY;
   const dl = days();
   const booked = items.filter(i=>i.status==="booked").length;
-  const cost = items.reduce((a,i)=>a+(Number(i.cost)||0),0);
   const until = daysUntil(TRIP_START);
   root.innerHTML = "";
   root.append(
@@ -43,7 +41,6 @@ function render(){
     h("div",{class:"kpis mt"},
       kpi(`${dl.length}`, "days", `${STOPS.reduce((a,s)=>a+(s.nights||0),0)} nights`),
       kpi(`${booked}`, "booked", `${items.filter(i=>i.status==="planned").length} planned · ${items.filter(i=>i.status==="idea").length} ideas`),
-      kpi(eur(cost) || "€0", "logged spend", "sum of costs entered"),
     ),
   );
   for (const d of dl){
@@ -104,7 +101,6 @@ function itemRow(i){
       h("div",{class:"hm-meta"},
         h("span",{class:"pill "+st.cls}, st.label),
         i.conf ? h("span",{class:"pill"}, "# "+i.conf) : null,
-        i.cost ? h("span",{class:"pill"}, eur(i.cost)) : null,
         i.link ? h("a",{href:i.link, target:"_blank", rel:"noopener", onClick:e=>e.stopPropagation()}, "link ↗") : null,
         !i.date && i.stop ? h("button",{class:"btn sm ghost", onClick:e=>{ e.stopPropagation(); schedule(i); }}, "Schedule") : null,
       )),
@@ -132,14 +128,13 @@ async function edit(i, preset={}){
       {name:"status", label:"Status", type:"select", options:Object.entries(STATUS).map(([v,s])=>({value:v, label:s.label})), value: preset.status || "planned"},
       {name:"details", label:"Details", type:"textarea", placeholder:"Address, what's included, who to ask for…"},
       {name:"conf", label:"Confirmation #"},
-      {name:"cost", label:"Cost (€)", type:"number", inputmode:"decimal", step:"0.01"},
       {name:"link", label:"Link", type:"url", placeholder:"https://"},
     ],
     values: i, submit: i ? "Save" : "Add", danger: i ? "Delete" : null,
     onDanger: async ()=>{ if (await confirmBox(`Delete “${i.title}”?`)) store.remove("trip", i.id, `removed “${i.title}” from the honeymoon`); },
   });
   if (!r || !r.title.trim()) return;
-  r.title = r.title.trim(); r.date = r.date || null; r.cost = Number(r.cost)||0;
+  r.title = r.title.trim(); r.date = r.date || null;
   if (r.date) r.stop = stopFor(r.date).id;
   if (i) await store.update("trip", i.id, r, `updated “${r.title}” on the honeymoon`);
   else { await store.add("trip", {...r, order: Date.now()}, `added “${r.title}” to the honeymoon${r.date ? " on "+fmt(r.date) : " ideas"}`); toast("Added"); }
