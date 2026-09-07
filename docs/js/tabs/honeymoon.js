@@ -39,11 +39,7 @@ function render(){
   root.append(
     h("div",{class:"page-head"}, h("h1",null,"Honeymoon"), h("span",{class:"sub"}, `Greece · Oct 11 – 23 · ${until} days away`), h("span",{class:"grow"}),
       h("button",{class:"btn sm rose", onClick:()=>edit()}, "+ Add")),
-    h("div",{class:"route"}, STOPS.map((s,i)=>[
-      i ? h("span",{class:"route-arrow"},"→") : null,
-      h("a",{class:"route-stop", href:"#honeymoon", style:`--c:${s.color}`, onClick:e=>{ e.preventDefault(); document.getElementById("day-"+s.from)?.scrollIntoView({behavior:"smooth", block:"start"}); }},
-        h("span",{class:"route-ic"}, s.emoji), h("b",null,s.name), h("span",{class:"route-when"}, s.from===s.to ? fmt(s.from) : `${fmt(s.from)} – ${fmt(s.to)}`, s.nights ? ` · ${s.nights} night${s.nights>1?"s":""}` : "")),
-    ])),
+    routeBar(),
     h("div",{class:"kpis mt"},
       kpi(`${dl.length}`, "days", `${STOPS.reduce((a,s)=>a+(s.nights||0),0)} nights`),
       kpi(`${booked}`, "booked", `${items.filter(i=>i.status==="planned").length} planned · ${items.filter(i=>i.status==="idea").length} ideas`),
@@ -76,6 +72,25 @@ function render(){
   }
   window.scrollTo(0, y);
 }
+/* Proportional timeline: each stop's width = its share of the trip's days. */
+function routeBar(){
+  const total = dl_len();
+  const bar = h("div",{class:"route"});
+  for (const s of STOPS){
+    const n = Math.round((parse(s.to) - parse(s.from))/864e5) + 1;
+    const short = s.id.startsWith("ath") ? "Athens" : s.id==="jtr" ? "Santorini" : s.id==="chq" ? "Chania" : s.id==="fly-out" ? "Fly" : "Home";
+    bar.append(h("a",{class:"route-stop", href:"#honeymoon", style:`--c:${s.color}; flex:${n} ${n} 0`, title:`${s.name} · ${n} day${n>1?"s":""}`,
+      onClick:e=>{ e.preventDefault(); document.getElementById("day-"+s.from)?.scrollIntoView({behavior:"smooth", block:"start"}); }},
+      h("span",{class:"route-ic"}, s.emoji),
+      h("b",{class:"route-name"}, h("span",{class:"full"}, s.name), h("span",{class:"short"}, short)),
+      h("span",{class:"route-when"}, n === 1 ? fmt(s.from) : `${fmt(s.from)} – ${fmt(s.to)}`),
+      h("span",{class:"route-days"}, `${n}d`)));
+  }
+  const ticks = h("div",{class:"route-ticks"});
+  for (const d of days()) ticks.append(h("span",{class:"tick", style:`--c:${d.stop.color}`, title:fmt(d.date)}, String(parse(d.date).getDate())));
+  return h("div",{class:"route-wrap"}, bar, ticks);
+}
+function dl_len(){ return days().length; }
 function byTime(a,b){ return (a.time||"99").localeCompare(b.time||"99") || (a.order??0)-(b.order??0); }
 function kpi(n,l,s){ return h("div",{class:"kpi"}, h("div",{class:"l"},l), h("div",{class:"n"},n), h("div",{class:"s"},s)); }
 
