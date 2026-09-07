@@ -16,6 +16,33 @@ const TABS = {
 };
 
 const AUTH = "ally-alex-auth-v1";
+const BUILD = "20260907.1817";   // stamped by scripts/bump.py
+
+/* ---------- self-update ----------
+   GitHub Pages caches every file for 10 minutes and phones have no hard refresh.
+   Poll version.json (never cached); when it changes, refetch our own files past the
+   HTTP cache and reload. Waits if a form is open so nobody loses an edit. */
+const FILES = ["index.html","css/app.css","js/app.js","js/store.js","js/util.js","js/config.js","data/seed.js",
+  ...Object.keys({home:1,planner:1,seating:1,music:1,guests:1,budget:1,timeline:1,vendors:1,ceremony:1,honeymoon:1}).map(t=>`js/tabs/${t}.js`)];
+let updatePending = false;
+async function checkForUpdate(){
+  try{
+    const r = await fetch(`version.json?_=${Date.now()}`, {cache:"no-store"});
+    const {v} = await r.json();
+    if (!v || v === BUILD || updatePending) return;
+    updatePending = true;
+    await Promise.all(FILES.map(f=>fetch(f, {cache:"reload"}).catch(()=>{})));
+    applyUpdate();
+  }catch(e){}
+}
+function applyUpdate(){
+  if (document.getElementById("modal")){ setTimeout(applyUpdate, 3000); return; }   // someone is mid-edit
+  toast("Updating to the latest version…");
+  setTimeout(()=>location.reload(), 600);
+}
+setTimeout(checkForUpdate, 4000);
+setInterval(checkForUpdate, 3*60*1000);
+document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState==="visible") checkForUpdate(); });
 const gate = document.getElementById("gate");
 const shell = document.getElementById("shell");
 
