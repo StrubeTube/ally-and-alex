@@ -52,21 +52,25 @@ function render(){
       h("div",{class:"tasks"}, suggested.sort(byDue).map(t=>taskRow(t, true))),
     ));
   }
+  const ids = new Set(tasks.map(t=>t.id));
+  const childrenOf = id => tasks.filter(t=>t.parent===id).sort(byDue);
+  const tops = tasks.filter(t=>!t.parent || !ids.has(t.parent));
   for (const w of weeks()){
-    const list = tasks.filter(t=> w.start===null ? !t.due : (t.due && t.due>=w.start && t.due<=w.end)).sort(byDue);
+    const list = tops.filter(t=> w.start===null ? !t.due : (t.due && t.due>=w.start && t.due<=w.end)).sort(byDue);
     if (!list.length && (w.title==="Before" || w.title==="No date yet")) continue;
-    const done = list.filter(t=>t.status==="done").length;
+    const flat = list.flatMap(t=>[t, ...childrenOf(t.id)]);
+    const done = flat.filter(t=>t.status==="done").length;
     const isNow = w.start===thisMonday;
     root.append(h("section",{class:"week"+(isNow?" now":"")},
-      h("div",{class:"week-head"}, h("h2",null, w.title), h("span",{class:"when"}, w.when + (isNow?" · this week":"")), h("span",{class:"prog"}, list.length ? `${done}/${list.length}` : "")),
-      list.length ? h("div",{class:"tasks"}, list.map(t=>taskRow(t))) : h("div",{class:"empty"},"Nothing scheduled."),
+      h("div",{class:"week-head"}, h("h2",null, w.title), h("span",{class:"when"}, w.when + (isNow?" · this week":"")), h("span",{class:"prog"}, flat.length ? `${done}/${flat.length}` : "")),
+      list.length ? h("div",{class:"tasks"}, list.map(t=>[taskRow(t, false, childrenOf(t.id)), ...childrenOf(t.id).map(c=>taskRow(c, false, [], true))])) : h("div",{class:"empty"},"Nothing scheduled."),
     ));
   }
 }
 function byDue(a,b){ return (a.due||"9999").localeCompare(b.due||"9999") || (a.order??0)-(b.order??0); }
 function seg(opts, cur, on, labels={}){ return h("div",{class:"seg"}, opts.map(o=>h("button",{class:o===cur?"on":"", onClick:()=>on(o)}, labels[o]||o))); }
 
-function taskRow(t, tray){
+function taskRow(t, tray, kids=[], isChild=false){
   const t0 = today();
   const late = t.due && t.due < t0 && t.status!=="done";
   const next = {todo:"doing", doing:"done", done:"todo"};
@@ -76,11 +80,12 @@ function taskRow(t, tray){
     const s = next[t.status]||"todo";
     await store.update("tasks", t.id, {status:s}, s==="done" ? `checked off “${t.title}”` : s==="doing" ? `started “${t.title}”` : `reopened “${t.title}”`);
   }}, t.status==="done"?"✓": t.status==="doing"?"…":"");
-  return h("div",{class:"task "+t.status+(late?" overdue":""), onClick:()=>editTask(t)},
+  const kidsDone = kids.filter(k=>k.status==="done").length;
+  return h("div",{class:"task "+t.status+(late?" overdue":"")+(isChild?" child":""), onClick:()=>editTask(t)},
     chk,
     h("div",null,
       h("div",{class:"t-title"}, t.title),
-      h("div",{class:"t-meta"}, h("span",{class:"cat"}, t.cat), t.due ? h("span",{class:"due"+(late?" late":"")}, late ? `${fmtLong(t.due)} · overdue` : fmtLong(t.due)) : h("span",{class:"faint"},"no date"), t.source==="suggested" && !tray ? h("span",{class:"pill gold"},"suggested") : null),
+      h("div",{class:"t-meta"}, h("span",{class:"cat"}, t.cat), t.due ? h("span",{class:"due"+(late?" late":"")}, late ? `${fmtLong(t.due)} · overdue` : fmtLong(t.due)) : h("span",{class:"faint"},"no date"), t.source==="suggested" && !tray ? h("span",{class:"pill gold"},"suggested") : null, kids.length ? h("span",{class:"pill"}, `${kidsDone}/${kids.length} sub-items`) : null),
       t.notes ? h("div",{class:"t-notes"}, t.notes) : null,
       tray ? h("div",{class:"tray-actions mt", onClick:e=>e.stopPropagation()},
         h("button",{class:"btn sm sage", onClick:()=>store.update("tasks", t.id, {accepted:true}, `accepted the suggestion “${t.title}”`)}, "Accept"),
@@ -100,6 +105,7 @@ async function editTask(t){
       {name:"due", label:"Due", type:"date"},
       {name:"cat", label:"Category", type:"select", options:CATEGORIES},
       {name:"status", label:"Status", type:"select", options:[{value:"todo",label:"To do"},{value:"doing",label:"In progress"},{value:"done",label:"Done"}]},
+      {name:"parent", label:"Sub-item of", type:"select", options:[{value:"", label:"— none —"}, ...store.get("tasks").filter(x=>(x.source!=="suggested"||x.accepted) && !x.parent && x.id!==t?.id && x.status!=="done").sort(byDue).map(x=>({value:x.id, label:(x.due?fmt(x.due)+" · ":"")+x.title}))], value:""},
       {name:"notes", label:"Notes", type:"textarea"},
     ],
     values: t,

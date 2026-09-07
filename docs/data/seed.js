@@ -241,7 +241,7 @@ export const VENDORS = [
   v("Charlotte LUX","Transportation","", "1:15 PM", "Men to McGill 1:15 PM, ladies 1:45 PM. Confirm plan Sept 23."),
   v("Bar","Beer & wine · ABC permit","", "", "You supply liquor and Italicus Spritz ingredients. Confirm ice, glassware, bartender, who transports."),
   v("Grand Bohemian","Getting-ready hotel","", "8:30 AM", "Bridesmaids arrive 8:30 AM."),
-  v("Emily","Officiant (?)","", "", "Vows to Emily for review by Sept 20. Confirm she's the officiant."),
+  v("Uncle Dennis","Officiant","", "", "Family officiant. Ceremony structure and processional order finalized with him."),
 ].map((x,i)=>({...x, id:"ven-"+String(i+1).padStart(2,"0"), order:i}));
 
 /* ---------------- day-of timeline ---------------- */
@@ -274,7 +274,7 @@ export const HMU_SLOTS = [];  // hair/makeup schedule, filled in on the site
 
 /* ---------------- ceremony & roles ---------------- */
 export const ROLES = [
-  {role:"Officiant", person:"Emily (confirm)", notes:"Vows to review by Sept 20."},
+  {role:"Officiant", person:"Uncle Dennis", notes:"Vows to Emily for review by Sept 20."},
   {role:"Holds the rings", person:"", notes:"Decide when rings are picked up Sept 26."},
   {role:"Holds the marriage license", person:"", notes:"Signed after the ceremony; who returns it to the Register of Deeds?"},
   {role:"Hands out vendor tips", person:"", notes:"Envelopes prepared Sept 26."},

@@ -155,12 +155,14 @@ h1,h2,h3{margin:0; font-weight:700}
 }
 .task.done{opacity:.55}
 .task.done .t-title{text-decoration:line-through}
+.task.child{margin-left:26px; background:var(--paper-2)}
+.task.child::before{content:""}
 .task.overdue:not(.done){border-left:3px solid var(--rose)}
 .task .chk{
   width:24px; height:24px; margin-top:1px; border-radius:7px; border:1.5px solid var(--line-2); background:#fff;
   display:flex; align-items:center; justify-content:center; font-size:14px; color:#fff; padding:0;
 }
-.task .chk.doing{border-color:var(--gold); background:var(--gold-soft)}
+.task .chk.doing{color:var(--gold); font-weight:700}
 .task .chk.done{border-color:var(--sage); background:var(--sage)}
 .task .t-title{font-weight:500; line-height:1.3}
 .task .t-meta{display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; font-size:11.5px; color:var(--ink-soft); align-items:center}

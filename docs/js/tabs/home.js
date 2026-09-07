@@ -63,8 +63,8 @@ function greeting(){
 function kpi(n, l, s){ return h("div",{class:"kpi"}, h("div",{class:"l"},l), h("div",{class:"n"},n), h("div",{class:"s"},s)); }
 function card(title, list, tone){
   return h("div",{class:"card"}, h("h2",null, title, h("span",{class:"cnt"}, list.length)),
-    list.length ? h("div",{class:"mini-list"}, list.slice(0,10).map(t=>h("div",{class:"mini"},
+    list.length ? h("div",{class:"mini-list"}, list.map(t=>h("div",{class:"mini"},
       h("span",{class:"d"+(tone==="rose"?" rose":"")}, relDay(t.due)),
-      h("a",{href:"#planner", style:"color:inherit;text-decoration:none"}, t.title),
+      h("a",{href:"#planner", style:"color:inherit;text-decoration:none"}, t.parent ? "↳ " : "", t.title),
       h("span",{class:"owner "+t.owner, style:"margin-left:auto"}, t.owner)))) : h("div",{class:"empty"}, tone==="rose" ? "Nothing overdue. Nice." : "Nothing due this week."));
 }
