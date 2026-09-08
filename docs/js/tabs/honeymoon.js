@@ -76,7 +76,7 @@ function board(items){
   return wrap;
 }
 /* ---------- hour-by-hour day popup ---------- */
-const DAY_START = 6, DAY_END = 25;   // 6 AM → 1 AM next day
+const DAY_START = 8, DAY_END = 23;   // 8 AM → 11 PM
 const PX_PER_HOUR = 46;
 function minutesOf(time){ if (!time) return null; const [hh,mm] = time.split(":").map(Number); return hh*60 + (mm||0); }
 function parseDur(i){
@@ -122,7 +122,10 @@ function dayDetail(d){
     grid.append(h("div",{class:"hd-line", style:`top:${y}px`}, h("span",null, lbl)));
   }
   // timed items, with simple lane packing for overlaps
-  const timed = items.filter(i=>i.time).map(i=>{ const st = minutesOf(i.time); const dur = parseDur(i); return {i, st, en: st+dur, dur}; }).sort((a,b)=>a.st-b.st);
+  const timed = items.filter(i=>i.time).map(i=>{
+    if (i.leg==="arrival"){ const en = minutesOf(i.time); const st = Math.min(en, DAY_START*60); return {i, st, en, dur: en-st, arrival:true}; }
+    const st = minutesOf(i.time); const dur = parseDur(i); return {i, st, en: st+dur, dur};
+  }).sort((a,b)=>a.st-b.st);
   const lanes = [];
   for (const t of timed){ let l = lanes.findIndex(end=>end <= t.st); if (l<0){ l = lanes.length; lanes.push(0); } lanes[l] = t.en; t.lane = l; }
   const nl = Math.max(1, lanes.length);
@@ -133,6 +136,7 @@ function dayDetail(d){
     const tt = TYPES[t.i.type] || TYPES.note;
     grid.append(h("div",{class:"hd-item "+cls, style:`top:${top}px; height:${Math.max(26, bottom-top)}px; left:calc(58px + ${t.lane}*(100% - 66px)/${nl}); width:calc((100% - 66px)/${nl} - 4px)`, onClick:()=>edit(t.i)},
       h("b",null, tt.icon+" ", shortTitle(t.i)),
+      t.arrival ? h("span",null, `In the air → lands ${time12(t.i.time)} local`) :
       h("span",null, `${time12(t.i.time)} → ${arrivalText(t.i) || endTimeText(t.i, t.st, t.dur)}`, t.i.type==="flight" ? ` · ${fmtDur(t.dur)}` : "")));
   }
   const untimed = items.filter(i=>!i.time);
@@ -280,6 +284,7 @@ async function edit(i, preset={}){
       {name:"date", label:"Day", type:"select", options:dayOpts, value: preset.date || ""},
       {name:"time", label:"Time", type:"time"},
       {name:"dur", label:"Duration (minutes, optional)", type:"number", inputmode:"numeric", placeholder:"e.g. 90"},
+      {name:"leg", label:"Flight leg", type:"select", options:[{value:"", label:"Departure (starts at this time)"},{value:"arrival", label:"Arrival (in the air until this time)"}], value:""},
       {name:"stop", label:"Stop", type:"select", options:STOPS.map(s=>({value:s.id, label:s.emoji+" "+s.name})), value: preset.stop || (preset.date ? stopFor(preset.date).id : "jtr")},
       {name:"status", label:"Status", type:"select", options:Object.entries(STATUS).map(([v,s])=>({value:v, label:s.label})), value: preset.status || "planned"},
       {name:"details", label:"Details", type:"textarea", placeholder:"Address, what's included, who to ask for…"},
