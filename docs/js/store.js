@@ -5,7 +5,7 @@
 import { firebaseConfig } from "./config.js";
 import * as SEED from "../data/seed.js";
 
-export const COLLECTIONS = ["tasks","guests","seats","charts","songs","payments","vendors","timeline","hmu","roles","processional","flow","party","trip","settings","activity"];
+export const COLLECTIONS = ["tasks","guests","seats","charts","songs","payments","vendors","timeline","hmu","roles","processional","flow","party","trip","hmblocks","settings","activity"];
 
 let adapter = null;
 const listeners = {};       // collection -> Set(cb)

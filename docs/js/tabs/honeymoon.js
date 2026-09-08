@@ -15,9 +15,85 @@ const TYPES = {
 };
 const STATUS = {booked:{label:"Booked", cls:"sage"}, planned:{label:"Planned", cls:"gold"}, idea:{label:"Idea", cls:""}};
 
-let unsub, root;
-export function mount(v){ root = h("div",{class:"page hm"}); v.append(root); unsub = store.subscribe("trip", render); }
-export function unmount(){ unsub?.(); }
+let unsubs = [], root;
+let view = localStorage.getItem("ally-alex-hm-view") || "days";
+export function mount(v){ root = h("div",{class:"page hm"}); v.append(root); unsubs.push(store.subscribe("trip", render), store.subscribe("hmblocks", render)); }
+export function unmount(){ unsubs.forEach(u=>u()); unsubs = []; }
+
+/* ---------- board view: 3 blocks per day ---------- */
+const PERIODS = [{id:"m", label:"Morning", from:5, to:12}, {id:"a", label:"Afternoon", from:12, to:17}, {id:"e", label:"Evening", from:17, to:29}];
+const BLOCK = {
+  travel:{label:"Travel", icon:"✈️"},
+  fun:{label:"Plans", icon:"🥂"},
+  relax:{label:"Relax", icon:"🌴"},
+};
+function periodOf(time){ if (!time) return null; const hr = Number(time.split(":")[0]); return PERIODS.find(p=>hr>=p.from && hr<p.to)?.id || "e"; }
+function autoBlock(list){
+  const travel = list.filter(i=>i.type==="flight" || i.type==="transport");
+  const fun = list.filter(i=>i.type==="food" || i.type==="activity");
+  if (travel.length) return {type:"travel", items:travel};
+  if (fun.length) return {type:"fun", items:fun};
+  return {type:"relax", items:list.filter(i=>i.type==="stay")};
+}
+function flightLine(i){
+  const m = i.details.match(/(\d{1,2}:\d{2}(?:\s?[AP]M)?)\s*(?:→|->)\s*(\d{1,2}:\d{2}(?:\s?[AP]M)?)/i);
+  const t = i.time ? time12(i.time) : "";
+  return m ? `${t || m[1]} → ${m[2]}` : t;
+}
+function board(items){
+  const dl = days();
+  const overrides = Object.fromEntries(store.get("hmblocks").map(b=>[b.id, b]));
+  const wrap = h("div",{class:"board"});
+  const legend = h("div",{class:"board-legend"},
+    h("span",{class:"bl travel"}, "✈️ Travel: flights and transfers with times"),
+    h("span",{class:"bl fun"}, "🥂 Plans: a dinner, tour or place we've booked"),
+    h("span",{class:"bl relax"}, "🌴 Relax: nothing set, pool and wandering"),
+    h("span",{class:"faint"}, "· tap a block to change it"));
+  const scroller = h("div",{class:"board-scroll"});
+  const cols = h("div",{class:"board-cols"});
+  for (const d of dl){
+    const dayItems = items.filter(i=>i.date===d.date);
+    const col = h("div",{class:"bcol", style:`--c:${d.stop.color}`},
+      h("div",{class:"bhead"}, h("b",null, fmt(d.date,{weekday:"short"})), h("span",null, fmt(d.date,{month:"short", day:"numeric"})), h("i",null, d.stop.emoji+" "+d.stop.name)));
+    for (const per of PERIODS){
+      const inPeriod = dayItems.filter(i=>periodOf(i.time)===per.id).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+      const ov = overrides[`${d.date}_${per.id}`];
+      const auto = autoBlock(inPeriod);
+      const type = ov?.type || auto.type;
+      const label = ov?.label || "";
+      const shown = type===auto.type ? auto.items : inPeriod;
+      const el = h("div",{class:"blk "+type, onClick:()=>editBlock(d, per, type, label, inPeriod)},
+        h("div",{class:"blk-per"}, per.label),
+        h("div",{class:"blk-body"},
+          label ? h("div",{class:"blk-lbl"}, label) : null,
+          shown.length ? shown.map(i=>h("div",{class:"blk-item"}, h("b",null, i.type==="flight" ? flightLine(i) : (i.time ? time12(i.time) : "")), h("span",null, shortTitle(i)))) :
+            (!label ? h("div",{class:"blk-def"}, BLOCK[type].icon+" "+BLOCK[type].label) : null)));
+      col.append(el);
+    }
+    cols.append(col);
+  }
+  scroller.append(cols); wrap.append(legend, scroller);
+  return wrap;
+}
+function shortTitle(i){
+  let t = i.title.replace(/·.*$/,"").trim();
+  const m = i.title.match(/\b([A-Z]{1,2}\d{2,4})\b/);
+  if (i.type==="flight"){ const parts = i.title.split("·").map(x=>x.trim()); const route = parts.find(x=>/→/.test(x)) || parts[0]; return (m && !route.includes(m[1]) ? m[1]+" " : "") + route; }
+  return t.length > 34 ? t.slice(0,32)+"…" : t;
+}
+async function editBlock(d, per, type, label, inPeriod){
+  const id = `${d.date}_${per.id}`;
+  const r = await modal({ title: `${fmt(d.date,{weekday:"long", month:"short", day:"numeric"})} · ${per.label}`,
+    fields:[
+      {name:"type", label:"Block type", type:"select", options:Object.entries(BLOCK).map(([v,b])=>({value:v, label:b.icon+" "+b.label})), value:type},
+      {name:"label", label:"Label (optional)", placeholder:"e.g. Drive to Charlotte · Pool day · Dinner in Oia", value:label},
+    ],
+    submit:"Save", danger: store.getOne("hmblocks", id) ? "Back to automatic" : null,
+    onDanger: ()=>store.remove("hmblocks", id, `reset ${per.label.toLowerCase()} on ${fmt(d.date)} to automatic`) });
+  if (!r) return;
+  await store.set("hmblocks", id, {date:d.date, period:per.id, type:r.type, label:(r.label||"").trim()}, `set ${fmt(d.date)} ${per.label.toLowerCase()} to ${BLOCK[r.type].label}${r.label ? ": "+r.label.trim() : ""}`);
+  if (inPeriod.length===0 && r.type==="fun" && r.label) toast("Tip: add the plan as an item in Days view too");
+}
 
 function days(){
   const out = []; let n = 1;
@@ -36,8 +112,12 @@ function render(){
   root.innerHTML = "";
   root.append(
     h("div",{class:"page-head"}, h("h1",null,"Honeymoon"), h("span",{class:"sub"}, `Greece · Oct 11 – 23 · ${until} days away`), h("span",{class:"grow"}),
+      h("div",{class:"seg"}, [["days","☰ Days"],["board","▦ Board"]].map(([v,l])=>h("button",{class:v===view?"on":"", onClick:()=>{ view=v; localStorage.setItem("ally-alex-hm-view", v); render(); }}, l))),
       h("button",{class:"btn sm rose", onClick:()=>edit()}, "+ Add")),
     routeBar(),
+  );
+  if (view==="board"){ root.append(board(items)); window.scrollTo(0, y); return; }
+  root.append(
     h("div",{class:"kpis mt"},
       kpi(`${dl.length}`, "days", `${STOPS.reduce((a,s)=>a+(s.nights||0),0)} nights`),
       kpi(`${booked}`, "booked", `${items.filter(i=>i.status==="planned").length} planned · ${items.filter(i=>i.status==="idea").length} ideas`),
