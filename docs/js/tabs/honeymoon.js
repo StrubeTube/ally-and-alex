@@ -86,6 +86,7 @@ function parseDur(i){
   if (m){ if (m[1]) return Number(m[1])*60 + Number(m[2]||0); if (m[3]) return Number(m[3]); if (m[4]) return Number(m[4])*60 + Number(m[5]||0); }
   return {flight:60, transport:45, stay:30, food:90, activity:150, note:30}[i.type] || 60;
 }
+function fmtDur(m){ const hh = Math.floor(m/60), mm = m%60; return (hh ? hh+"h" : "") + (mm ? (hh?" ":"")+mm+"m" : (hh ? "" : "0m")); }
 function endTimeText(i, startMin, dur){
   const end = startMin + dur; const nextDay = end >= 24*60;
   const hh = Math.floor((end % (24*60))/60), mm = end % 60;
@@ -124,7 +125,7 @@ function dayDetail(d){
     const tt = TYPES[t.i.type] || TYPES.note;
     grid.append(h("div",{class:"hd-item "+cls, style:`top:${top}px; height:${Math.max(26, bottom-top)}px; left:calc(58px + ${t.lane}*(100% - 66px)/${nl}); width:calc((100% - 66px)/${nl} - 4px)`, onClick:()=>edit(t.i)},
       h("b",null, tt.icon+" ", shortTitle(t.i)),
-      h("span",null, `${time12(t.i.time)} → ${endTimeText(t.i, t.st, t.dur)}`, t.i.type==="flight" ? ` · ${Math.floor(t.dur/60)}h${t.dur%60 ? " "+t.dur%60+"m" : ""}` : "")));
+      h("span",null, `${time12(t.i.time)} → ${endTimeText(t.i, t.st, t.dur)}`, t.i.type==="flight" ? ` · ${fmtDur(t.dur)}` : "")));
   }
   const untimed = items.filter(i=>!i.time);
   const box = h("div",{class:"box hd-box"},

@@ -16,7 +16,7 @@ const TABS = {
 };
 
 const AUTH = "ally-alex-auth-v1";
-const BUILD = "20260907.2149";   // stamped by scripts/bump.py
+const BUILD = "20260907.2150";   // stamped by scripts/bump.py
 
 /* ---------- self-update ----------
    GitHub Pages caches every file for 10 minutes and phones have no hard refresh.
