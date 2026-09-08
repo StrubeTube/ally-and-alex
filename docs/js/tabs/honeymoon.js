@@ -87,6 +87,14 @@ function parseDur(i){
   return {flight:60, transport:45, stay:30, food:90, activity:150, note:30}[i.type] || 60;
 }
 function fmtDur(m){ const hh = Math.floor(m/60), mm = m%60; return (hh ? hh+"h" : "") + (mm ? (hh?" ":"")+mm+"m" : (hh ? "" : "0m")); }
+/* Flights: prefer the stated arrival time (local to the destination) over start+duration. */
+function arrivalText(i){
+  if (i.type!=="flight") return "";
+  const m = i.details.match(/lands?\s+(?:[A-Z]{3}\s+)?(\d{1,2}:\d{2}\s?[AP]M)(\s+\w+\s+\d{1,2})?/i) || i.details.match(/(?:→|->)\s*(\d{1,2}:\d{2}(?:\s?[AP]M)?)/);
+  if (!m) return "";
+  let t = m[1]; if (!/[AP]M/i.test(t)) t = time12(t.length===4 ? "0"+t : t);
+  return t + (m[2] ? " local, next day" : " local");
+}
 function endTimeText(i, startMin, dur){
   const end = startMin + dur; const nextDay = end >= 24*60;
   const hh = Math.floor((end % (24*60))/60), mm = end % 60;
@@ -125,7 +133,7 @@ function dayDetail(d){
     const tt = TYPES[t.i.type] || TYPES.note;
     grid.append(h("div",{class:"hd-item "+cls, style:`top:${top}px; height:${Math.max(26, bottom-top)}px; left:calc(58px + ${t.lane}*(100% - 66px)/${nl}); width:calc((100% - 66px)/${nl} - 4px)`, onClick:()=>edit(t.i)},
       h("b",null, tt.icon+" ", shortTitle(t.i)),
-      h("span",null, `${time12(t.i.time)} → ${endTimeText(t.i, t.st, t.dur)}`, t.i.type==="flight" ? ` · ${fmtDur(t.dur)}` : "")));
+      h("span",null, `${time12(t.i.time)} → ${arrivalText(t.i) || endTimeText(t.i, t.st, t.dur)}`, t.i.type==="flight" ? ` · ${fmtDur(t.dur)}` : "")));
   }
   const untimed = items.filter(i=>!i.time);
   const box = h("div",{class:"box hd-box"},
