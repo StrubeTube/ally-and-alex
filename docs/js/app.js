@@ -16,7 +16,7 @@ const TABS = {
 };
 
 const AUTH = "ally-alex-auth-v1";
-const BUILD = "20260907.1904";   // stamped by scripts/bump.py
+const BUILD = "20260907.2047";   // stamped by scripts/bump.py
 
 /* ---------- self-update ----------
    GitHub Pages caches every file for 10 minutes and phones have no hard refresh.
@@ -136,6 +136,15 @@ async function route(){
   window.scrollTo(0,0);
   const nav = document.querySelector("#nav a.on"); nav?.scrollIntoView({inline:"center", block:"nearest"});
 }
+
+/* ---------- theme ---------- */
+function applyTheme(t){ document.documentElement.setAttribute("data-theme", t); const b = document.getElementById("themeBtn"); if (b) b.textContent = t==="dark" ? "☀️" : "🌙"; }
+applyTheme(document.documentElement.getAttribute("data-theme") || "light");
+document.getElementById("themeBtn").onclick = ()=>{
+  const t = document.documentElement.getAttribute("data-theme")==="dark" ? "light" : "dark";
+  try{ localStorage.setItem("ally-alex-theme", t); }catch(e){}
+  applyTheme(t);
+};
 
 /* ---------- boot ---------- */
 const saved = loadAuth();

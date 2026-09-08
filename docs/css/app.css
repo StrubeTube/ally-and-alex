@@ -8,6 +8,14 @@
   --serif:Fraunces,Georgia,serif;
   --nav-h:44px; --top-h:52px;
 }
+html[data-theme="dark"]{
+  --page:#17161a; --paper:#211f24; --paper-2:#2a272e; --line:#39353e; --line-2:#4a454f;
+  --ink:#ece7de; --ink-soft:#aaa39a; --ink-faint:#756f6a;
+  --rose:#e07a72; --rose-soft:#3d2a29; --sage:#8fb494; --sage-soft:#26332a;
+  --gold:#d6b25a; --gold-soft:#3a3222; --danger:#e0736a;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
 *{box-sizing:border-box}
 html{height:100%; -webkit-text-size-adjust:100%}
 body{
@@ -39,9 +47,9 @@ h1,h2,h3{margin:0; font-weight:700}
 .gate-title{font:italic 600 38px/1.05 var(--serif); letter-spacing:-.01em}
 .gate-sub{margin:8px 0 22px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft)}
 .gate-label{display:block; text-align:left; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); margin:14px 0 6px}
-#passcode{width:100%; padding:11px 12px; border:1px solid var(--line-2); border-radius:10px; background:#fff; font-size:17px}
+#passcode{width:100%; padding:11px 12px; border:1px solid var(--line-2); border-radius:10px; background:var(--paper); font-size:17px}
 .who-row{display:flex; gap:8px}
-.who-btn{flex:1; padding:11px; border:1px solid var(--line-2); border-radius:10px; background:#fff; font-weight:700; font-size:16px}
+.who-btn{flex:1; padding:11px; border:1px solid var(--line-2); border-radius:10px; background:var(--paper); font-weight:700; font-size:16px}
 .who-btn.on{background:var(--rose); border-color:var(--rose); color:#fff}
 .gate-go{width:100%; margin-top:20px; padding:12px; border:0; border-radius:10px; background:var(--ink); color:#fff; font-weight:700; font-size:16px}
 .gate-go:disabled{opacity:.35; cursor:default}
@@ -51,7 +59,7 @@ h1,h2,h3{margin:0; font-weight:700}
 #shell{display:flex; flex-direction:column; min-height:100vh; min-height:100dvh}
 #top{
   position:sticky; top:0; z-index:40; height:var(--top-h); display:flex; align-items:center; gap:12px;
-  padding:0 14px; background:rgba(246,241,232,.92); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  padding:0 14px; background:color-mix(in srgb, var(--page) 92%, transparent); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   border-bottom:1px solid var(--line);
 }
 .brand{text-decoration:none; color:var(--ink)}
@@ -105,7 +113,7 @@ h1,h2,h3{margin:0; font-weight:700}
 .icon-btn{border:0; background:none; padding:4px 6px; color:var(--ink-faint); border-radius:6px; font-size:16px; line-height:1}
 .icon-btn:hover{color:var(--ink); background:var(--paper-2)}
 .input,.select,.textarea{
-  width:100%; padding:8px 10px; border:1px solid var(--line-2); border-radius:9px; background:#fff; font-size:15px;
+  width:100%; padding:8px 10px; border:1px solid var(--line-2); border-radius:9px; background:var(--paper); font-size:15px;
 }
 .textarea{min-height:64px; resize:vertical}
 .input.sm{padding:5px 8px; font-size:13px}
@@ -118,7 +126,7 @@ h1,h2,h3{margin:0; font-weight:700}
 .pill.sage{background:var(--sage-soft); color:var(--sage)}
 .pill.gold{background:var(--gold-soft); color:var(--gold)}
 .pill.ink{background:var(--ink); color:#fff}
-.seg{display:inline-flex; border:1px solid var(--line-2); border-radius:9px; overflow:hidden; background:#fff}
+.seg{display:inline-flex; border:1px solid var(--line-2); border-radius:9px; overflow:hidden; background:var(--paper)}
 .seg button{border:0; background:none; padding:6px 11px; font-weight:700; font-size:13px; color:var(--ink-soft)}
 .seg button.on{background:var(--ink); color:#fff}
 .empty{padding:18px; text-align:center; color:var(--ink-faint); font-size:14px}
@@ -158,7 +166,7 @@ h1,h2,h3{margin:0; font-weight:700}
 .task.child{margin-left:26px; background:var(--paper-2)}
 .task.overdue:not(.done){border-left:3px solid var(--rose)}
 .task .chk{
-  width:24px; height:24px; margin-top:1px; border-radius:7px; border:1.5px solid var(--line-2); background:#fff;
+  width:24px; height:24px; margin-top:1px; border-radius:7px; border:1.5px solid var(--line-2); background:var(--paper);
   display:flex; align-items:center; justify-content:center; font-size:14px; color:#fff; padding:0;
 }
 .task .chk.doing{color:var(--gold); font-weight:700}
@@ -259,7 +267,7 @@ table.tbl{width:100%; border-collapse:collapse; font-size:14px}
 .tbl tr.paid td.v{text-decoration:line-through}
 .tbl .amt{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
 .tbl-wrap{overflow-x:auto}
-.paybox{width:22px; height:22px; border-radius:6px; border:1.5px solid var(--line-2); background:#fff; padding:0; color:#fff; font-size:13px}
+.paybox{width:22px; height:22px; border-radius:6px; border:1.5px solid var(--line-2); background:var(--paper); padding:0; color:#fff; font-size:13px}
 .paybox.on{background:var(--sage); border-color:var(--sage)}
 
 /* ---------- timeline ---------- */
@@ -329,7 +337,7 @@ table.tbl{width:100%; border-collapse:collapse; font-size:14px}
 #seatingWrap{display:flex; flex:none; min-height:0; height:calc(100dvh - var(--top-h) - var(--nav-h))}
 #seatingWrap aside{width:300px; flex:none; background:var(--paper); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0}
 #seatingWrap aside .tools{padding:10px 12px 6px; flex:none; display:flex; gap:6px}
-#seatSearch{flex:1; padding:7px 10px; border:1px solid var(--line-2); border-radius:8px; background:#fff; font-size:16px}
+#seatSearch{flex:1; padding:7px 10px; border:1px solid var(--line-2); border-radius:8px; background:var(--paper); font-size:16px}
 #seatGroups{flex:1; overflow-y:auto; padding:2px 12px 8px}
 .sgroup{margin-bottom:10px}
 .sgroup h2{margin:10px 0 6px; font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); display:flex; justify-content:space-between}
@@ -352,7 +360,7 @@ aside .chip{touch-action:pan-x}
   background:linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px), var(--paper);
   background-size:52px 52px, 52px 52px, auto; border:1px solid var(--line); border-radius:10px;
 }
-.table{position:absolute; border:1.5px solid var(--ink); border-radius:3px; background:rgba(255,255,255,.75); display:flex; align-items:center; justify-content:center}
+.table{position:absolute; border:1.5px solid var(--ink); border-radius:3px; background:var(--paper-2); display:flex; align-items:center; justify-content:center}
 .table .tlabel{font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); text-align:center; pointer-events:none}
 .table .tcount{font-weight:400; font-variant-numeric:tabular-nums}
 .table .divider{position:absolute; top:0; bottom:0; width:1.5px; background:var(--ink)}
@@ -424,3 +432,19 @@ body.placing-seated #placeBar #unseatBtn{display:inline-block}
   body{background:#fff}
   .page{padding:0}
 }
+
+/* ---------- dark-mode tints for fixed-color bits ---------- */
+.theme-btn{font-size:17px; padding:4px 6px}
+html[data-theme="dark"] .owner.Ally{background:#4a2b28; color:#f1a79c}
+html[data-theme="dark"] .owner.Alex{background:#243646; color:#9fc4e6}
+html[data-theme="dark"] .owner.Both{background:#3a3423; color:#d9c58a}
+html[data-theme="dark"] .cchip.Ally{background:#4a2b28} html[data-theme="dark"] .cchip.Alex{background:#243646} html[data-theme="dark"] .cchip.Both{background:#3a3423}
+html[data-theme="dark"] .lg.Ally{background:#8a4a44} html[data-theme="dark"] .lg.Alex{background:#3f6a8c} html[data-theme="dark"] .lg.Both{background:#7a6a3a}
+html[data-theme="dark"] .ms{color:#e2c77a} html[data-theme="dark"] .ms.rose{color:#f1a79c} html[data-theme="dark"] .ms.sage{color:#a8d1ad}
+html[data-theme="dark"] #banner{background:#3a3222; color:#e2c77a; border-color:#4a4030}
+html[data-theme="dark"] .cd.gold{color:#e2c77a}
+html[data-theme="dark"] #modal{background:rgba(0,0,0,.6)}
+html[data-theme="dark"] .task.child{background:var(--paper-2)}
+html[data-theme="dark"] .tray{background:var(--paper-2)} html[data-theme="dark"] .tray .task{background:var(--paper)}
+html[data-theme="dark"] .song .art{background:var(--paper-2)}
+html[data-theme="dark"] #toast{background:#3b3740}
