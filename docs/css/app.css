@@ -474,3 +474,27 @@ html[data-theme="dark"] .bl.travel, html[data-theme="dark"] .blk.travel{backgrou
 html[data-theme="dark"] .bl.fun, html[data-theme="dark"] .blk.fun{background:#4a2c36; color:#f1b7c7}
 html[data-theme="dark"] .bl.relax, html[data-theme="dark"] .blk.relax{background:#26332a; color:#a8d1ad}
 @media (max-width:640px){ .bcol{width:140px} .blk{min-height:84px} }
+
+/* ---------- honeymoon hour-by-hour ---------- */
+.bhead{cursor:pointer}
+.bhead-more{font-size:10px; color:var(--ink-faint); margin-top:3px}
+.bhead:hover .bhead-more{color:var(--rose)}
+#modal .hd-box{max-width:640px}
+.hd-scroll{max-height:62vh; overflow:auto; border:1px solid var(--line); border-radius:10px; background:var(--paper)}
+.hd-grid{position:relative; margin:0 0 0 0}
+.hd-line{position:absolute; left:0; right:0; border-top:1px solid var(--line); pointer-events:none}
+.hd-line span{position:absolute; left:6px; top:-8px; font-size:10.5px; color:var(--ink-faint); background:var(--paper); padding:0 3px; font-variant-numeric:tabular-nums}
+.hd-band{position:absolute; left:54px; right:0; pointer-events:none}
+.hd-band.travel{background:rgba(47,111,159,.13)} .hd-band.fun{background:rgba(214,96,137,.14)} .hd-band.relax{background:rgba(95,122,99,.08)}
+.hd-band-lbl{position:absolute; right:8px; top:4px; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; opacity:.6}
+.hd-item{position:absolute; border-radius:8px; padding:4px 8px; font-size:12px; line-height:1.25; overflow:hidden; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.15); border-left:3px solid}
+.hd-item b{display:block; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.hd-item span{font-size:11px; opacity:.85; white-space:nowrap}
+.hd-item.travel{background:#c9dcee; color:#173a57; border-color:#2f6f9f}
+.hd-item.fun{background:#f4cfd9; color:#6a2740; border-color:#c9587c}
+.hd-item.stay{background:#e6dfd0; color:#4a3f2a; border-color:#a8842c}
+.hd-untimed{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:10px; font-size:12px}
+html[data-theme="dark"] .hd-item.travel{background:#2a4a66; color:#cfe3f5}
+html[data-theme="dark"] .hd-item.fun{background:#5a3040; color:#f6c9d6}
+html[data-theme="dark"] .hd-item.stay{background:#4a4030; color:#eadcb8}
+html[data-theme="dark"] .hd-band.travel{background:rgba(120,170,220,.14)} html[data-theme="dark"] .hd-band.fun{background:rgba(230,140,170,.14)} html[data-theme="dark"] .hd-band.relax{background:rgba(150,200,160,.07)}

@@ -54,7 +54,7 @@ function board(items){
   for (const d of dl){
     const dayItems = items.filter(i=>i.date===d.date);
     const col = h("div",{class:"bcol", style:`--c:${d.stop.color}`},
-      h("div",{class:"bhead"}, h("b",null, fmt(d.date,{weekday:"short"})), h("span",null, fmt(d.date,{month:"short", day:"numeric"})), h("i",null, d.stop.emoji+" "+d.stop.name)));
+      h("div",{class:"bhead", title:"Hour by hour", onClick:()=>dayDetail(d)}, h("b",null, fmt(d.date,{weekday:"short"})), h("span",null, fmt(d.date,{month:"short", day:"numeric"})), h("i",null, d.stop.emoji+" "+d.stop.name), h("span",{class:"bhead-more"},"⏱ hours")));
     for (const per of PERIODS){
       const inPeriod = dayItems.filter(i=>periodOf(i.time)===per.id).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
       const ov = overrides[`${d.date}_${per.id}`];
@@ -74,6 +74,72 @@ function board(items){
   }
   scroller.append(cols); wrap.append(legend, scroller);
   return wrap;
+}
+/* ---------- hour-by-hour day popup ---------- */
+const DAY_START = 6, DAY_END = 25;   // 6 AM → 1 AM next day
+const PX_PER_HOUR = 46;
+function minutesOf(time){ if (!time) return null; const [hh,mm] = time.split(":").map(Number); return hh*60 + (mm||0); }
+function parseDur(i){
+  if (Number(i.dur) > 0) return Number(i.dur);
+  const txt = (i.title+" "+i.details);
+  const m = txt.match(/\((\d+)h(?:\s?(\d+)m)?\)|\((\d+)\s?min\)|(\d+)h\s?(\d+)m\b/);
+  if (m){ if (m[1]) return Number(m[1])*60 + Number(m[2]||0); if (m[3]) return Number(m[3]); if (m[4]) return Number(m[4])*60 + Number(m[5]||0); }
+  return {flight:60, transport:45, stay:30, food:90, activity:150, note:30}[i.type] || 60;
+}
+function endTimeText(i, startMin, dur){
+  const end = startMin + dur; const nextDay = end >= 24*60;
+  const hh = Math.floor((end % (24*60))/60), mm = end % 60;
+  return time12(`${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`) + (nextDay ? " next day" : "");
+}
+function dayDetail(d){
+  const items = store.get("trip").filter(i=>i.date===d.date);
+  const overrides = Object.fromEntries(store.get("hmblocks").map(b=>[b.id, b]));
+  const hours = DAY_END - DAY_START;
+  const grid = h("div",{class:"hd-grid", style:`height:${hours*PX_PER_HOUR}px`});
+  // period bands (block color, lighter) + labels
+  for (const per of PERIODS){
+    const inPeriod = items.filter(i=>periodOf(i.time)===per.id);
+    const ov = overrides[`${d.date}_${per.id}`];
+    const type = ov?.type || autoBlock(inPeriod).type;
+    const from = Math.max(per.from, DAY_START), to = Math.min(per.to, DAY_END);
+    if (to <= from) continue;
+    grid.append(h("div",{class:"hd-band "+type, style:`top:${(from-DAY_START)*PX_PER_HOUR}px; height:${(to-from)*PX_PER_HOUR}px`},
+      h("span",{class:"hd-band-lbl"}, per.label + (ov?.label ? " · "+ov.label : (type!=="relax" ? " · "+BLOCK[type].label : "")))));
+  }
+  // hour lines + labels
+  for (let hr = DAY_START; hr <= DAY_END; hr++){
+    const y = (hr-DAY_START)*PX_PER_HOUR;
+    const lbl = hr===24 ? "12 AM" : hr > 24 ? `${hr-24} AM` : time12(`${String(hr).padStart(2,"0")}:00`).replace(":00","");
+    grid.append(h("div",{class:"hd-line", style:`top:${y}px`}, h("span",null, lbl)));
+  }
+  // timed items, with simple lane packing for overlaps
+  const timed = items.filter(i=>i.time).map(i=>{ const st = minutesOf(i.time); const dur = parseDur(i); return {i, st, en: st+dur, dur}; }).sort((a,b)=>a.st-b.st);
+  const lanes = [];
+  for (const t of timed){ let l = lanes.findIndex(end=>end <= t.st); if (l<0){ l = lanes.length; lanes.push(0); } lanes[l] = t.en; t.lane = l; }
+  const nl = Math.max(1, lanes.length);
+  for (const t of timed){
+    const top = Math.max(0, (t.st/60 - DAY_START)*PX_PER_HOUR);
+    const bottom = Math.min(hours*PX_PER_HOUR, (t.en/60 - DAY_START)*PX_PER_HOUR);
+    const cls = t.i.type==="flight"||t.i.type==="transport" ? "travel" : (t.i.type==="food"||t.i.type==="activity") ? "fun" : "stay";
+    const tt = TYPES[t.i.type] || TYPES.note;
+    grid.append(h("div",{class:"hd-item "+cls, style:`top:${top}px; height:${Math.max(26, bottom-top)}px; left:calc(58px + ${t.lane}*(100% - 66px)/${nl}); width:calc((100% - 66px)/${nl} - 4px)`, onClick:()=>edit(t.i)},
+      h("b",null, tt.icon+" ", shortTitle(t.i)),
+      h("span",null, `${time12(t.i.time)} → ${endTimeText(t.i, t.st, t.dur)}`, t.i.type==="flight" ? ` · ${Math.floor(t.dur/60)}h${t.dur%60 ? " "+t.dur%60+"m" : ""}` : "")));
+  }
+  const untimed = items.filter(i=>!i.time);
+  const box = h("div",{class:"box hd-box"},
+    h("div",{class:"row"}, h("h3",null, `${fmt(d.date,{weekday:"long", month:"long", day:"numeric"})}`), h("span",{class:"faint"}, `Day ${d.n} · ${d.stop.emoji} ${d.stop.name}`), h("span",{class:"grow"}),
+      h("button",{class:"btn sm rose", onClick:()=>{ close(); edit(null, {date:d.date, stop:d.stop.id}); }}, "+ Add"), h("button",{class:"icon-btn", onClick:()=>close()}, "✕")),
+    h("div",{class:"hd-scroll"}, grid),
+    untimed.length ? h("div",{class:"hd-untimed"}, h("span",{class:"cat"},"No time set: "), untimed.map(i=>h("button",{class:"btn sm ghost", onClick:()=>{ close(); edit(i); }}, (TYPES[i.type]||TYPES.note).icon+" "+shortTitle(i)))) : null,
+    h("div",{class:"faint", style:"font-size:11px; margin-top:8px"}, "Flights use their real duration. Other items use the Duration field, or a default by type. Tinted bands are the Board's blocks."),
+  );
+  const wrap = h("div",{id:"modal", onClick:e=>{ if (e.target===wrap) close(); }}, box);
+  function close(){ wrap.remove(); document.removeEventListener("keydown", esc); }
+  function esc(e){ if (e.key==="Escape") close(); }
+  document.addEventListener("keydown", esc);
+  document.body.append(wrap);
+  const sc = box.querySelector(".hd-scroll"); const first = timed[0]; if (first) sc.scrollTop = Math.max(0, (first.st/60 - DAY_START - 1)*PX_PER_HOUR);
 }
 function shortTitle(i){
   let t = i.title.replace(/·.*$/,"").trim();
@@ -204,6 +270,7 @@ async function edit(i, preset={}){
       {name:"type", label:"Type", type:"select", options:Object.entries(TYPES).map(([v,t])=>({value:v, label:t.icon+" "+t.label})), value: preset.type || "activity"},
       {name:"date", label:"Day", type:"select", options:dayOpts, value: preset.date || ""},
       {name:"time", label:"Time", type:"time"},
+      {name:"dur", label:"Duration (minutes, optional)", type:"number", inputmode:"numeric", placeholder:"e.g. 90"},
       {name:"stop", label:"Stop", type:"select", options:STOPS.map(s=>({value:s.id, label:s.emoji+" "+s.name})), value: preset.stop || (preset.date ? stopFor(preset.date).id : "jtr")},
       {name:"status", label:"Status", type:"select", options:Object.entries(STATUS).map(([v,s])=>({value:v, label:s.label})), value: preset.status || "planned"},
       {name:"details", label:"Details", type:"textarea", placeholder:"Address, what's included, who to ask for…"},
@@ -214,7 +281,7 @@ async function edit(i, preset={}){
     onDanger: async ()=>{ if (await confirmBox(`Delete “${i.title}”?`)) store.remove("trip", i.id, `removed “${i.title}” from the honeymoon`); },
   });
   if (!r || !r.title.trim()) return;
-  r.title = r.title.trim(); r.date = r.date || null;
+  r.title = r.title.trim(); r.date = r.date || null; r.dur = Number(r.dur)||0;
   if (r.date) r.stop = stopFor(r.date).id;
   if (i) await store.update("trip", i.id, r, `updated “${r.title}” on the honeymoon`);
   else { await store.add("trip", {...r, order: Date.now()}, `added “${r.title}” to the honeymoon${r.date ? " on "+fmt(r.date) : " ideas"}`); toast("Added"); }
