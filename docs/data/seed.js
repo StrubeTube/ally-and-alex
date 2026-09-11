@@ -83,9 +83,10 @@ export const GROUPS = [
 /* ---------------- floor plan (venue sketch) ---------------- */
 export const FLOOR = {w:1240, h:1040};
 export const TABLES = [
-  {id:"t1", label:"Table 1", cx:364, cy:270, w:240, h:88, angle:-52, perSide:4, ends:true},
-  {id:"t2", label:"Table 2", cx:620, cy:270, w:240, h:88, angle:-52, perSide:4, ends:true},
-  {id:"t3", label:"Table 3", cx:876, cy:270, w:240, h:88, angle:-52, perSide:4, ends:true},
+  {id:"t1", label:"Table 1", cx:236, cy:270, w:240, h:88, angle:-52, perSide:4, ends:true},
+  {id:"t2", label:"Table 2", cx:492, cy:270, w:240, h:88, angle:-52, perSide:4, ends:true},
+  {id:"t3", label:"Table 3", cx:748, cy:270, w:240, h:88, angle:-52, perSide:4, ends:true},
+  {id:"t8", label:"Table 8", cx:1004, cy:270, w:240, h:88, angle:-52, perSide:4, ends:true},
   {id:"head", label:"Head Table", cx:620, cy:545, w:660, h:80, angle:0, perSide:12, sections:3},
   {id:"t4", label:"Table 4", cx:236, cy:860, w:240, h:88, angle:-52, perSide:4, ends:true},
   {id:"t5", label:"Table 5", cx:492, cy:860, w:240, h:88, angle:-52, perSide:4, ends:true},
