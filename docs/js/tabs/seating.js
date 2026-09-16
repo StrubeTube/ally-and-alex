@@ -301,9 +301,19 @@ function startTableDrag(e, t){
     cleanup(); if (!active) return;
     suppressClick = true; setTimeout(()=>suppressClick=false, 150);
     el.classList.remove("dragging"); document.body.classList.remove("moving-table"); draggingTable = null;
-    const cur = chart(); const pos = cur.layout[t.id];
-    await store.update("charts", chartId, {layout: cur.layout}, `moved ${tableNames()[t.id]||t.label}${where()}`);
-    render();
+    const cur = chart(); const dropped = cur.layout[t.id];
+    // Slots are fixed: find the nearest other table of the same shape and swap places with it.
+    let best = null, bd = 170;
+    for (const o of TABLES){
+      if (o.id===t.id || o.w!==t.w || o.h!==t.h || o.angle!==t.angle) continue;
+      const op = tablePos(o); const d = Math.hypot(op.cx-dropped.cx, op.cy-dropped.cy);
+      if (d < bd){ bd = d; best = o; }
+    }
+    if (!best){ apply(start.cx, start.cy); render(); toast("Drop it on another table to swap places"); return; }
+    const otherPos = tablePos(best);
+    cur.layout = {...cur.layout, [t.id]:{cx:otherPos.cx, cy:otherPos.cy}, [best.id]:{cx:start.cx, cy:start.cy}};
+    placeGeometry(); render();
+    await store.update("charts", chartId, {layout: cur.layout}, `swapped ${tableNames()[t.id]||t.label} and ${tableNames()[best.id]||best.label}${where()}`);
   };
   const cancel = ()=>{ cleanup(); if (!active) return; el.classList.remove("dragging"); document.body.classList.remove("moving-table"); draggingTable = null; apply(start.cx, start.cy); render(); };
   document.addEventListener("pointermove", move, {passive:false}); document.addEventListener("pointerup", up); document.addEventListener("pointercancel", cancel);
