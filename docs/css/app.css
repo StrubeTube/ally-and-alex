@@ -361,6 +361,9 @@ aside .chip{touch-action:pan-x}
   background-size:52px 52px, 52px 52px, auto; border:1px solid var(--line); border-radius:10px;
 }
 .table{position:absolute; border:1.5px solid var(--ink); border-radius:3px; background:var(--paper-2); display:flex; align-items:center; justify-content:center}
+.table{cursor:grab; touch-action:none}
+.table.dragging{cursor:grabbing; box-shadow:0 8px 20px rgba(0,0,0,.3); z-index:50; border-color:var(--rose)}
+body.moving-table #canvas .chip{pointer-events:none}
 .table .tlabel{font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); text-align:center; pointer-events:none}
 .table .tcount{font-weight:400; font-variant-numeric:tabular-nums}
 .table .divider{position:absolute; top:0; bottom:0; width:1.5px; background:var(--ink)}

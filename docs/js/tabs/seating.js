@@ -7,25 +7,31 @@ import { COLORS, GROUPS, TABLES, FLOOR } from "../../data/seed.js";
 import { editGuest } from "./guests.js";
 
 const W = FLOOR.w, H = FLOOR.h;
-const SEATS = [];
-for (const t of TABLES){
-  const rad = t.angle*Math.PI/180, cos = Math.cos(rad), sin = Math.sin(rad);
-  const off = t.h/2 + 30; let n = 0;
-  for (const side of [-1,1]) for (let i=0;i<t.perSide;i++){
-    const lx = -t.w/2 + t.w*(i+0.5)/t.perSide, ly = side*off;
-    SEATS.push({key:`${t.id}-${n++}`, table:t.id, x:t.cx + lx*cos - ly*sin, y:t.cy + lx*sin + ly*cos});
+let SEATS = [], SEAT_BY_KEY = {};
+const tablePos = (t)=>{ const o = chart()?.layout?.[t.id]; return o ? {cx:o.cx, cy:o.cy} : {cx:t.cx, cy:t.cy}; };
+/* Seat keys (t1-0 …) never change, only their x/y, so placements survive a table move. */
+function computeSeats(){
+  SEATS = [];
+  for (const t of TABLES){
+    const {cx, cy} = tablePos(t);
+    const rad = t.angle*Math.PI/180, cos = Math.cos(rad), sin = Math.sin(rad);
+    const off = t.h/2 + 30; let n = 0;
+    for (const side of [-1,1]) for (let i=0;i<t.perSide;i++){
+      const lx = -t.w/2 + t.w*(i+0.5)/t.perSide, ly = side*off;
+      SEATS.push({key:`${t.id}-${n++}`, table:t.id, x:cx + lx*cos - ly*sin, y:cy + lx*sin + ly*cos});
+    }
+    if (t.ends) for (const ex of [-1,1]){ const lx = ex*(t.w/2+30); SEATS.push({key:`${t.id}-${n++}`, table:t.id, x:cx+lx*cos, y:cy+lx*sin}); }
+    t.cap = n;
   }
-  if (t.ends) for (const ex of [-1,1]){ const lx = ex*(t.w/2+30); SEATS.push({key:`${t.id}-${n++}`, table:t.id, x:t.cx+lx*cos, y:t.cy+lx*sin}); }
-  t.cap = n;
+  SEAT_BY_KEY = Object.fromEntries(SEATS.map(s=>[s.key,s]));
 }
-const SEAT_BY_KEY = Object.fromEntries(SEATS.map(s=>[s.key,s]));
 const LS_CHART = "ally-alex-chart";
 
 let unsubs = [], root, guests = [], byId = {}, seats = new Map(), charts = [], chartId = null;
 let draggingId = null, selectedId = null, suppressClick = false, scale = 1;
-let canvas, wrap, floor, groupsEl, tabsEl, bankChips = {}, floorChips = {}, tableEls = {};
+let canvas, wrap, floor, groupsEl, tabsEl, bankChips = {}, floorChips = {}, tableEls = {}, tableBoxes = {}, seatDots = {};
 
-const chart = ()=>charts.find(c=>c.id===chartId) || charts[0];
+const chart = ()=>charts.find(c=>c.id===chartId) || charts[0] || null;
 const tableNames = ()=>chart()?.names || {};
 const seatId = (gid)=>`${chartId}__${gid}`;
 
@@ -42,7 +48,7 @@ export function mount(view){
       h("aside",null,
         h("div",{class:"tools"}, h("input",{id:"seatSearch", type:"search", placeholder:"Find a guest…"}), h("button",{class:"btn sm", title:"Add a guest", onClick:()=>editGuest()}, "+ Guest")),
         h("div",{id:"seatGroups"}),
-        h("div",{class:"hint"},"Tap a name, then tap a seat — or tap another person to swap. Drag works too. Double-click a table to rename it, a seated person to unseat them, or a name in this list to edit or remove them."),
+        h("div",{class:"hint"},"Tap a name, then tap a seat — or tap another person to swap. Drag works too. Drag a table to move it (its guests come along). Double-click a table to rename it, a seated person to unseat them, or a name in this list to edit or remove them."),
       ),
     ),
   );
@@ -51,10 +57,11 @@ export function mount(view){
   canvas = root.querySelector("#canvas"); wrap = root.querySelector("#canvasWrap"); floor = root.querySelector("#floor"); groupsEl = root.querySelector("#seatGroups");
   const fromHash = location.hash.split("/")[1];
   chartId = fromHash || localStorage.getItem(LS_CHART) || "c1";
+  computeSeats();
   buildFloor();
   wireControls();
   unsubs.push(
-    store.subscribe("charts", ()=>{ charts = chartsSorted(); if (!charts.find(c=>c.id===chartId)) chartId = charts[0].id; renderTabs(); loadSeats(); render(); }),
+    store.subscribe("charts", ()=>{ charts = chartsSorted(); if (!charts.find(c=>c.id===chartId)) chartId = charts[0].id; if (!draggingTable) placeGeometry(); renderTabs(); loadSeats(); render(); }),
     store.subscribe("guests", g=>{ guests = g; byId = Object.fromEntries(g.map(x=>[x.id,x])); buildBank(); render(); }),
     store.subscribe("seats", ()=>{ loadSeats(); render(); }),
   );
@@ -72,7 +79,13 @@ function loadSeats(){
 function switchChart(id){
   select(null); chartId = id; try{ localStorage.setItem(LS_CHART, id); }catch(e){}
   history.replaceState(null, "", "#seating/"+id);
-  renderTabs(); loadSeats(); render();
+  placeGeometry(); renderTabs(); loadSeats(); render();
+}
+/* Recompute seat coordinates from the current chart's layout and move tables + seat dots. */
+function placeGeometry(){
+  computeSeats();
+  for (const t of TABLES){ const el = tableBoxes[t.id]; if (!el) continue; const {cx,cy} = tablePos(t); el.style.left = (cx-t.w/2)+"px"; el.style.top = (cy-t.h/2)+"px"; }
+  for (const sd of SEATS){ const d = seatDots[sd.key]; if (d){ d.style.left = sd.x+"px"; d.style.top = sd.y+"px"; } }
 }
 
 /* ---------- chart tabs ---------- */
@@ -99,7 +112,7 @@ async function newChart(){
   if (!r || !r.name.trim()) return;
   const id = "c" + Date.now().toString(36);
   const src = charts.find(c=>c.id===r.from);
-  await store.set("charts", id, {name:r.name.trim(), names: src ? {...(src.names||{})} : {}, order: Date.now()}, `created “${r.name.trim()}”` + (src ? ` from ${src.name}` : ""));
+  await store.set("charts", id, {name:r.name.trim(), names: src ? {...(src.names||{})} : {}, layout: src ? {...(src.layout||{})} : {}, order: Date.now()}, `created “${r.name.trim()}”` + (src ? ` from ${src.name}` : ""));
   charts = chartsSorted(); switchChart(id);
   if (src){
     const copies = store.get("seats").map(normSeat).filter(s=>s.chart===src.id && s.seat);
@@ -118,7 +131,7 @@ async function clearChart(){
 }
 async function chartMenu(){
   const c = chart(); if (!c) return;
-  const r = await modal({ title: c.name, fields:[{name:"name", label:"Rename"}], values:{name:c.name}, submit:"Save",
+  const r = await modal({ title: c.name, fields:[{name:"name", label:"Rename"}, {name:"reset", label:"Table positions", type:"select", options:[{value:"", label:"Keep as they are"},{value:"reset", label:"Reset all tables to the original layout"}], value:""}], values:{name:c.name, reset:""}, submit:"Save",
     danger: charts.length > 1 ? "Delete this chart" : null,
     onDanger: async ()=>{
       if (!(await confirmBox(`Delete “${c.name}” and its ${seats.size} placements?`))) return;
@@ -127,6 +140,7 @@ async function chartMenu(){
       charts = chartsSorted(); switchChart(charts[0].id);
     } });
   if (r && r.name.trim() && r.name.trim()!==c.name) await store.update("charts", c.id, {name:r.name.trim()}, `renamed “${c.name}” to “${r.name.trim()}”`);
+  if (r && r.reset==="reset"){ await store.update("charts", c.id, {layout:{}}, `reset the table layout on “${c.name}”`); placeGeometry(); render(); }
 }
 
 /* ---------- writes ---------- */
@@ -166,9 +180,10 @@ function buildFloor(){
     const lab = h("div",{class:"tlabel"}); el.append(lab);
     if (t.sections) for (let i=1;i<t.sections;i++) el.append(h("div",{class:"divider", style:`left:${t.w*i/t.sections}px`}));
     el.addEventListener("dblclick", ()=>{ const cur = tableNames()[t.id]||t.label; const name = prompt("Table name:", cur); if (name && name.trim()) writeTableName(t.id, name.trim().slice(0,24)); });
-    canvas.append(el); tableEls[t.id] = lab;
+    el.addEventListener("pointerdown", e=>startTableDrag(e, t));
+    canvas.append(el); tableEls[t.id] = lab; tableBoxes[t.id] = el;
   }
-  for (const s of SEATS) canvas.append(h("div",{class:"seat", style:`left:${s.x}px; top:${s.y}px`}));
+  for (const s of SEATS){ const d = h("div",{class:"seat", style:`left:${s.x}px; top:${s.y}px`}); canvas.append(d); seatDots[s.key] = d; }
   canvas.addEventListener("click", e=>{
     if (!selectedId || suppressClick) return;
     const id = selectedId; const p = canvasPoint(e); select(null);
@@ -259,6 +274,39 @@ function wireControls(){
 function applySearch(){
   const q = (root.querySelector("#seatSearch")?.value||"").trim().toLowerCase();
   for (const g of guests) bankChips[g.id]?.classList.toggle("hidden-by-search", !!q && !g.name.toLowerCase().includes(q));
+}
+
+/* ---------- table drag ---------- */
+let draggingTable = null;
+function startTableDrag(e, t){
+  if (e.button !== undefined && e.button !== 0) return;
+  if (selectedId) return;                       // placing a person: let the canvas click handle it
+  const sx = e.clientX, sy = e.clientY; const start = tablePos(t); let active = false;
+  const el = tableBoxes[t.id];
+  const cleanup = ()=>{ document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up); document.removeEventListener("pointercancel", cancel); };
+  const apply = (cx, cy)=>{
+    const cur = chart(); if (!cur) return;
+    cur.layout = {...(cur.layout||{}), [t.id]:{cx, cy}};
+    placeGeometry();
+    for (const [gid, key] of seats){ const sd = SEAT_BY_KEY[key]; const c = floorChips[gid]; if (sd && c && sd.table===t.id){ c.style.left = sd.x+"px"; c.style.top = sd.y+"px"; } }
+  };
+  const move = ev=>{
+    if (!active){ if (Math.hypot(ev.clientX-sx, ev.clientY-sy) < 6) return; active = true; draggingTable = t.id; el.classList.add("dragging"); document.body.classList.add("moving-table"); }
+    ev.preventDefault();
+    const dx = (ev.clientX-sx)/scale, dy = (ev.clientY-sy)/scale;
+    const m = 40;
+    apply(Math.max(m, Math.min(W-m, start.cx+dx)), Math.max(m, Math.min(H-m, start.cy+dy)));
+  };
+  const up = async ()=>{
+    cleanup(); if (!active) return;
+    suppressClick = true; setTimeout(()=>suppressClick=false, 150);
+    el.classList.remove("dragging"); document.body.classList.remove("moving-table"); draggingTable = null;
+    const cur = chart(); const pos = cur.layout[t.id];
+    await store.update("charts", chartId, {layout: cur.layout}, `moved ${tableNames()[t.id]||t.label}${where()}`);
+    render();
+  };
+  const cancel = ()=>{ cleanup(); if (!active) return; el.classList.remove("dragging"); document.body.classList.remove("moving-table"); draggingTable = null; apply(start.cx, start.cy); render(); };
+  document.addEventListener("pointermove", move, {passive:false}); document.addEventListener("pointerup", up); document.addEventListener("pointercancel", cancel);
 }
 
 /* ---------- drag ---------- */
