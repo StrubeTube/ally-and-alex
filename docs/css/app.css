@@ -547,3 +547,4 @@ html[data-theme="dark"] .hd-band.travel{background:rgba(120,170,220,.14)} html[d
 .vbtn:disabled{cursor:default}
 .passed{margin-top:12px} .passed summary{font-size:12.5px; color:var(--ink-soft); cursor:pointer}
 @media (max-width:640px){ .dgrid{grid-template-columns:1fr} .ncard{width:104px} }
+.tag.ally{background:var(--ink); color:var(--paper)}

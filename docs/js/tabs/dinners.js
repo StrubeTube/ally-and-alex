@@ -92,7 +92,7 @@ function card(o, nd, s){
       h("span",{class:"grow"}),
       h("button",{class:"icon-btn", title:"Edit", onClick:()=>editOption(o)}, "✎")),
     meta ? h("div",{class:"dc-meta"}, meta) : null,
-    tags.length ? h("div",{class:"dc-tags"}, tags.map(t=>h("span",{class:"tag"+(/view/i.test(t)?" view":"")+(/walk|min|door/i.test(t)?" walk":"")+(/plaka/i.test(t)?" plaka":"")}, t))) : null,
+    tags.length ? h("div",{class:"dc-tags"}, tags.map(t=>h("span",{class:"tag"+(/view/i.test(t)?" view":"")+(/walk|min|door/i.test(t)?" walk":"")+(/plaka/i.test(t)?" plaka":"")+(/ally/i.test(t)?" ally":"")}, t))) : null,
     o.tldr ? h("p",{class:"dc-tldr"}, o.tldr) : null,
     o.chicken ? h("div",{class:"dc-chicken"}, h("b",null,"🍗 For Ally: "), o.chicken) : null,
     o.notes ? h("div",{class:"dc-notes"}, o.notes) : null,
