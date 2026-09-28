@@ -4,6 +4,7 @@
 import { store } from "../store.js";
 import { h, fmt, parse, ymd, addDays, daysUntil, time12, money, modal, confirmBox, toast } from "../util.js";
 import { STOPS, TRIP_START, TRIP_END } from "../../data/seed.js";
+import * as dinners from "./dinners.js";
 
 const TYPES = {
   flight:   {icon:"✈️", label:"Flight"},
@@ -17,7 +18,7 @@ const STATUS = {booked:{label:"Booked", cls:"sage"}, planned:{label:"Planned", c
 
 let unsubs = [], root;
 let view = localStorage.getItem("ally-alex-hm-view") || "days";
-export function mount(v){ root = h("div",{class:"page hm"}); v.append(root); unsubs.push(store.subscribe("trip", render), store.subscribe("hmblocks", render)); }
+export function mount(v){ root = h("div",{class:"page hm"}); v.append(root); dinners.onRerender(render); unsubs.push(store.subscribe("trip", render), store.subscribe("hmblocks", render), store.subscribe("dinners", render), store.subscribe("nights", render)); }
 export function unmount(){ unsubs.forEach(u=>u()); unsubs = []; }
 
 /* ---------- board view: 3 blocks per day ---------- */
@@ -191,11 +192,12 @@ function render(){
   root.innerHTML = "";
   root.append(
     h("div",{class:"page-head"}, h("h1",null,"Honeymoon"), h("span",{class:"sub"}, `Greece · Oct 11 – 23 · ${until} days away`), h("span",{class:"grow"}),
-      h("div",{class:"seg"}, [["days","☰ Days"],["board","▦ Board"]].map(([v,l])=>h("button",{class:v===view?"on":"", onClick:()=>{ view=v; localStorage.setItem("ally-alex-hm-view", v); render(); }}, l))),
-      h("button",{class:"btn sm rose", onClick:()=>edit()}, "+ Add")),
+      h("div",{class:"seg"}, [["days","☰ Days"],["board","▦ Board"],["dinners","🍽️ Dinners"]].map(([v,l])=>h("button",{class:v===view?"on":"", onClick:()=>{ view=v; localStorage.setItem("ally-alex-hm-view", v); render(); }}, l))),
+      view==="dinners" ? null : h("button",{class:"btn sm rose", onClick:()=>edit()}, "+ Add")),
     routeBar(),
   );
   if (view==="board"){ root.append(board(items)); window.scrollTo(0, y); return; }
+  if (view==="dinners"){ root.append(dinners.view()); window.scrollTo(0, y); return; }
   root.append(
     h("div",{class:"kpis mt"},
       kpi(`${dl.length}`, "days", `${STOPS.reduce((a,s)=>a+(s.nights||0),0)} nights`),

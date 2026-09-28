@@ -16,14 +16,14 @@ const TABS = {
 };
 
 const AUTH = "ally-alex-auth-v1";
-const BUILD = "20260916.1842";   // stamped by scripts/bump.py
+const BUILD = "20260928.1853";   // stamped by scripts/bump.py
 
 /* ---------- self-update ----------
    GitHub Pages caches every file for 10 minutes and phones have no hard refresh.
    Poll version.json (never cached); when it changes, refetch our own files past the
    HTTP cache and reload. Waits if a form is open so nobody loses an edit. */
 const FILES = ["index.html","css/app.css","js/app.js","js/store.js","js/util.js","js/config.js","data/seed.js",
-  ...Object.keys({home:1,planner:1,seating:1,music:1,guests:1,budget:1,timeline:1,vendors:1,ceremony:1,honeymoon:1}).map(t=>`js/tabs/${t}.js`)];
+  ...Object.keys({home:1,planner:1,seating:1,music:1,guests:1,budget:1,timeline:1,vendors:1,ceremony:1,honeymoon:1,dinners:1}).map(t=>`js/tabs/${t}.js`)];
 let updatePending = false;
 async function checkForUpdate(){
   try{
