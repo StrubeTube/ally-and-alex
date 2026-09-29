@@ -548,3 +548,18 @@ html[data-theme="dark"] .hd-band.travel{background:rgba(120,170,220,.14)} html[d
 .passed{margin-top:12px} .passed summary{font-size:12.5px; color:var(--ink-soft); cursor:pointer}
 @media (max-width:640px){ .dgrid{grid-template-columns:1fr} .ncard{width:104px} }
 .tag.ally{background:var(--ink); color:var(--paper)}
+/* dinners: 2 + 4 funnel */
+.steps{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px}
+.step{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-faint); border:1px solid var(--line); border-radius:999px; padding:3px 10px 3px 4px; background:var(--paper)}
+.step b{display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:var(--paper-2); color:var(--ink-soft); font-size:11px}
+.step.on{color:var(--ink); border-color:var(--ink)} .step.on b{background:var(--ink); color:var(--paper)}
+.step.done{color:var(--sage)} .step.done b{background:var(--sage-soft); color:var(--sage)}
+.dsec{margin-top:14px}
+.dsec-h{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+.dsec-h h3{font:italic 600 20px/1.1 var(--serif)}
+.dsec-h .faint{font-size:12.5px}
+.dsec .dgrid{margin-top:8px}
+.dcard.tier-ally{border-color:var(--ink)}
+.dcard.short{border-color:var(--gold); box-shadow:0 0 0 2px var(--gold-soft)}
+.ncard .n-state.alex{color:#3f6a8c} .ncard .n-state.ally{color:var(--rose)}
+html[data-theme="dark"] .ncard .n-state.alex{color:#9fc4e6}

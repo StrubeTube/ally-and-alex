@@ -1,14 +1,16 @@
-/* Honeymoon → Dinners: pick where to eat each night of the trip.
+/* Honeymoon → Dinners: pick where to eat each night of the trip, in three steps.
    nights/{date}  = {date, stop, vibe, time, conf, notes, chosen}
-   dinners/{id}   = {night, stop, name, area, cuisine, walk, price, view, hours, tldr, chicken, tags, maps, site, menu, reserve, pick, status, voteAlly, voteAlex, notes, order}
-   Choosing an option writes trip/dinner-{date} so it shows up in Days, Board and the hour view. */
+   dinners/{id}   = {night, stop, name, area, cuisine, walk, price, hours, tldr, chicken, tags, maps, site, menu, reserve, notes,
+                     tier: "ally" (Ally's two) | "claude" (Claude's four) | "more" (bench), rank, shortlisted (Alex's 2 of Claude's 4)}
+   Step 1: Alex shortlists 2 of Claude's four.  Step 2: Ally chooses from the final four (her two + Alex's two).  Step 3: reserve.
+   Choosing writes trip/dinner-{date} so it shows up in Days, Board and the hour view. */
 import { store } from "../store.js";
 import { h, fmt, addDays, time12, modal, confirmBox, toast } from "../util.js";
 import { STOPS, TRIP_START, TRIP_END } from "../../data/seed.js";
 
 const HOTEL = {ath1:"COCO-MAT", jtr:"Cavo Tagoo", chq:"Residenza Vranas", ath2:"Zeus Dolce"};
-const VOTES = [["love","❤️","Love it"],["ok","👍","Happy to"],["no","👎","Pass"]];
 const PRICES = ["€","€€","€€€","€€€€"];
+const TIERS = {ally:"Ally's two", claude:"Claude's four", more:"Bench (more options)"};
 let sel = null;
 let rerender = ()=>{};
 export function onRerender(fn){ rerender = fn; }
@@ -23,96 +25,122 @@ export function nights(){
   return out;
 }
 function nightDoc(date){ return store.getOne("nights", date) || {date, vibe:"", time:"20:00", conf:"", notes:"", chosen:""}; }
-function score(o){ const v = {love:2, ok:1, no:-2}; return (v[o.voteAlly]||0) + (v[o.voteAlex]||0); }
 function stopOf(date){ return STOPS.find(x=>date>=x.from && date<=x.to); }
 function shortStop(s){ return s.id.startsWith("ath") ? "Athens" : s.id==="jtr" ? "Santorini" : "Chania"; }
+const byRank = (a,b)=>(a.rank??99)-(b.rank??99) || (a.order??0)-(b.order??0);
+
+/* Split a night's options into the funnel. */
+function funnel(date){
+  const nd = nightDoc(date);
+  const opts = store.get("dinners").filter(o=>o.night===date);
+  const ally = opts.filter(o=>o.tier==="ally").sort(byRank);
+  const claude = opts.filter(o=>o.tier==="claude").sort(byRank);
+  const bench = opts.filter(o=>!o.tier || o.tier==="more").sort(byRank);
+  const picked = claude.filter(o=>o.shortlisted);
+  const chosen = opts.find(o=>o.id===nd.chosen);
+  const stage = chosen ? 3 : (picked.length >= 2 ? 2 : 1);
+  const finalFour = [...ally, ...picked];
+  return {nd, opts, ally, claude, bench, picked, chosen, stage, finalFour};
+}
 
 export function view(){
   const list = nights();
-  const all = store.get("dinners");
-  if (!sel || !list.some(n=>n.date===sel)) sel = (list.find(n=>!nightDoc(n.date).chosen) || list[0]).date;
+  if (!sel || !list.some(n=>n.date===sel)) sel = (list.find(n=>funnel(n.date).stage < 3) || list[0]).date;
   const wrap = h("div",{class:"dinners"});
 
   // night strip
   const strip = h("div",{class:"nstrip"});
-  list.forEach((n)=>{
-    const nd = nightDoc(n.date);
-    const opts = all.filter(o=>o.night===n.date && o.status!=="passed");
-    const chosen = opts.find(o=>o.id===nd.chosen);
-    strip.append(h("button",{class:"ncard"+(n.date===sel?" on":"")+(chosen?" done":""), style:`--c:${n.stop.color}`, onClick:()=>{ sel = n.date; rerender(); }},
+  for (const n of list){
+    const f = funnel(n.date);
+    const state = f.chosen ? "✓ "+f.chosen.name : !f.opts.length ? "nothing yet" : f.stage===1 ? "Alex to pick" : "Ally to pick";
+    strip.append(h("button",{class:"ncard"+(n.date===sel?" on":"")+(f.chosen?" done":""), style:`--c:${n.stop.color}`, onClick:()=>{ sel = n.date; rerender(); }},
       h("span",{class:"n-dow"}, fmt(n.date,{weekday:"short"})),
       h("b",null, fmt(n.date,{month:"short", day:"numeric"})),
       h("span",{class:"n-stop"}, n.stop.emoji+" "+shortStop(n.stop)),
-      h("span",{class:"n-state "+(chosen ? "ok" : opts.length ? "some" : "")}, chosen ? "✓ "+chosen.name : opts.length ? `${opts.length} option${opts.length>1?"s":""}` : "nothing yet")));
-  });
+      h("span",{class:"n-state "+(f.chosen ? "ok" : f.opts.length ? (f.stage===1 ? "alex" : "ally") : "")}, state)));
+  }
   wrap.append(strip);
 
   // selected night
-  const n = list.find(x=>x.date===sel), nd = nightDoc(sel), s = n.stop;
-  const opts = all.filter(o=>o.night===sel);
-  const chosen = opts.find(o=>o.id===nd.chosen);
-  const idx = list.findIndex(x=>x.date===sel);
-  const liveCount = opts.filter(o=>o.status!=="passed").length;
+  const n = list.find(x=>x.date===sel), s = n.stop, idx = list.findIndex(x=>x.date===sel);
+  const f = funnel(sel), nd = f.nd;
   const head = h("div",{class:"card nhead", style:`--c:${s.color}`},
     h("div",{class:"row"},
       h("div",{class:"grow"},
         h("div",{class:"nh-title"}, h("b",null, fmt(sel,{weekday:"long", month:"long", day:"numeric"})), h("span",{class:"pill nh-stop"}, `${s.emoji} ${s.name} · night ${idx+1} of ${list.length}`)),
-        h("div",{class:"nh-sub"}, chosen
-          ? h("span",null, "Dinner: ", h("b",null, chosen.name), nd.time ? ` at ${time12(nd.time)}` : "", nd.conf ? ` · reserved #${nd.conf}` : " · not reserved yet")
-          : h("span",{class:"faint"}, liveCount ? "Nothing chosen yet. Vote, then tap Choose on the winner." : "No options yet."))),
+        h("div",{class:"nh-sub"}, f.chosen
+          ? h("span",null, "Dinner: ", h("b",null, f.chosen.name), nd.time ? ` at ${time12(nd.time)}` : "", nd.conf ? ` · reserved #${nd.conf}` : " · not reserved yet")
+          : null)),
       h("button",{class:"btn sm", onClick:()=>editNight(nd)}, "✎ Night"),
       h("button",{class:"btn sm rose", onClick:()=>editOption(null, {night:sel, stop:s.id})}, "+ Option")),
+    f.opts.length ? steps(f) : null,
     nd.vibe ? h("div",{class:"nh-vibe"}, nd.vibe) : null,
     nd.notes ? h("div",{class:"nh-notes"}, nd.notes) : null,
   );
   wrap.append(head);
 
-  const live = opts.filter(o=>o.status!=="passed").sort((a,b)=>(b.id===nd.chosen)-(a.id===nd.chosen) || (b.pick?1:0)-(a.pick?1:0) || score(b)-score(a) || (a.order??0)-(b.order??0));
-  const passed = opts.filter(o=>o.status==="passed");
-  if (!live.length && !passed.length){
+  if (!f.opts.length){
     wrap.append(h("div",{class:"empty"}, `No dinner options for this night yet. Ask Claude to research it ("dinner options for ${fmt(sel,{month:"long", day:"numeric"})}") or add one with + Option.`));
-  } else {
-    wrap.append(h("div",{class:"dgrid"}, live.map(o=>card(o, nd, s))));
-    if (passed.length) wrap.append(h("details",{class:"passed"}, h("summary",null, `${passed.length} passed on`), h("div",{class:"dgrid"}, passed.map(o=>card(o, nd, s)))));
+    return wrap;
   }
+
+  if (f.stage === 3){
+    wrap.append(section("Tonight", "Chosen. Reserve it, then add the confirmation with ✎ Night.", [card(f.chosen, f, s)]));
+    const rest = f.finalFour.filter(o=>o.id!==f.chosen.id);
+    if (rest.length) wrap.append(h("details",{class:"passed"}, h("summary",null, `The other ${rest.length} from the final four`), h("div",{class:"dgrid"}, rest.map(o=>card(o, f, s)))));
+  } else if (f.stage === 2){
+    wrap.append(section("Final four", "Ally's two plus the two Alex shortlisted. Ally taps Choose on the winner.", f.finalFour.map(o=>card(o, f, s))));
+    const rest = f.claude.filter(o=>!o.shortlisted);
+    if (rest.length) wrap.append(h("details",{class:"passed"}, h("summary",null, `${rest.length} of Claude's four not shortlisted`), h("div",{class:"dgrid"}, rest.map(o=>card(o, f, s)))));
+  } else {
+    wrap.append(section("Ally's two", f.ally.length ? "Straight through to the final four." : "Nothing from Ally's Google Maps list fits this night.", f.ally.map(o=>card(o, f, s))));
+    wrap.append(section("Claude's four", `Alex shortlists two · ${f.picked.length} of 2 picked`, f.claude.map(o=>card(o, f, s))));
+  }
+  if (f.bench.length) wrap.append(h("details",{class:"passed"}, h("summary",null, `Bench · ${f.bench.length} more option${f.bench.length>1?"s":""} (edit one to move it up)`), h("div",{class:"dgrid"}, f.bench.map(o=>card(o, f, s)))));
   return wrap;
 }
 
-function card(o, nd, s){
-  const me = store.who, isChosen = o.id===nd.chosen;
+function steps(f){
+  const st = [["1","Alex shortlists 2 of Claude's four"],["2","Ally picks from the final four"],["3","Reserve it"]];
+  return h("div",{class:"steps"}, st.map(([n,l],i)=>h("span",{class:"step"+(f.stage===i+1?" on":"")+(f.stage>i+1?" done":"")}, h("b",null, f.stage>i+1 ? "✓" : n), l)));
+}
+function section(title, sub, cards){
+  return h("div",{class:"dsec"}, h("div",{class:"dsec-h"}, h("h3",null, title), sub ? h("span",{class:"faint"}, sub) : null),
+    cards.length ? h("div",{class:"dgrid"}, cards) : h("div",{class:"empty", style:"padding:10px"}, "Nothing here yet."));
+}
+
+function card(o, f, s){
+  const me = store.who, isChosen = o.id===f.nd.chosen;
   const links = [["maps","📍 Map"],["site","🌐 Website"],["menu","📖 Menu"],["reserve","📅 Reserve"]].filter(([k])=>o[k]);
-  const tags = String(o.tags||"").split(",").map(t=>t.trim()).filter(Boolean);
+  const tags = String(o.tags||"").split(",").map(t=>t.trim()).filter(Boolean).filter(t=>!/ally's list|claude's pick/i.test(t));
   const meta = [o.cuisine, o.area, o.walk ? `${o.walk} from ${HOTEL[o.stop]||"the hotel"}` : "", o.hours].filter(Boolean).join(" · ");
-  return h("div",{class:"dcard"+(isChosen?" chosen":"")+(o.status==="passed"?" passed":""), style:`--c:${s.color}`},
+  const inFinal = f.finalFour.some(x=>x.id===o.id);
+  let action = null;
+  if (isChosen) action = h("button",{class:"btn sm ghost", onClick:()=>choose(o, f.nd, false)}, "Change");
+  else if (f.stage===2 && inFinal) action = h("button",{class:"btn sm sage", disabled: me!=="Ally", title: me!=="Ally" ? "Ally's call" : "", onClick:()=>choose(o, f.nd, true)}, me==="Ally" ? "Choose ✓" : "Ally chooses");
+  else if (o.tier==="claude" && f.stage<3){
+    const full = f.picked.length>=2 && !o.shortlisted;
+    action = h("button",{class:"btn sm "+(o.shortlisted ? "primary" : "ghost"), disabled: me!=="Alex" || full, title: me!=="Alex" ? "Alex's call" : full ? "Two already shortlisted" : "",
+      onClick:()=>store.update("dinners", o.id, {shortlisted: !o.shortlisted}, `${o.shortlisted ? "dropped" : "shortlisted"} ${o.name} for ${fmt(o.night)}`)}, o.shortlisted ? "★ Shortlisted" : "☆ Shortlist");
+  }
+  return h("div",{class:"dcard tier-"+(o.tier||"more")+(isChosen?" chosen":"")+(o.shortlisted&&!isChosen?" short":""), style:`--c:${s.color}`},
     h("div",{class:"dc-top"},
       h("div",{class:"dc-name"}, o.site ? h("a",{href:o.site, target:"_blank", rel:"noopener"}, o.name) : o.name),
       o.price ? h("span",{class:"pill"}, o.price) : null,
-      o.pick ? h("span",{class:"pill gold"}, "Claude's pick") : null,
+      o.tier==="ally" ? h("span",{class:"pill ink"}, "Ally's list") : o.tier==="claude" ? h("span",{class:"pill gold"}, `Claude #${o.rank ?? "?"}`) : null,
       isChosen ? h("span",{class:"pill sage"}, "✓ Chosen") : null,
       h("span",{class:"grow"}),
       h("button",{class:"icon-btn", title:"Edit", onClick:()=>editOption(o)}, "✎")),
     meta ? h("div",{class:"dc-meta"}, meta) : null,
-    tags.length ? h("div",{class:"dc-tags"}, tags.map(t=>h("span",{class:"tag"+(/view/i.test(t)?" view":"")+(/walk|min|door/i.test(t)?" walk":"")+(/plaka/i.test(t)?" plaka":"")+(/ally/i.test(t)?" ally":"")}, t))) : null,
+    tags.length ? h("div",{class:"dc-tags"}, tags.map(t=>h("span",{class:"tag"+(/view/i.test(t)?" view":"")+(/walk|min|door/i.test(t)?" walk":"")+(/plaka/i.test(t)?" plaka":"")}, t))) : null,
     o.tldr ? h("p",{class:"dc-tldr"}, o.tldr) : null,
     o.chicken ? h("div",{class:"dc-chicken"}, h("b",null,"🍗 For Ally: "), o.chicken) : null,
     o.notes ? h("div",{class:"dc-notes"}, o.notes) : null,
     links.length ? h("div",{class:"dc-links"}, links.map(([k,l])=>h("a",{class:"btn sm ghost", href:o[k], target:"_blank", rel:"noopener"}, l+" ↗"))) : null,
-    h("div",{class:"dc-foot"},
-      ["Ally","Alex"].map(p=>h("div",{class:"vote"+(p===me?" mine":"")},
-        h("span",{class:"vwho"}, p),
-        VOTES.map(([v,ic,t])=>h("button",{class:"vbtn"+(o["vote"+p]===v?" on "+v:""), title:t, disabled:p!==me, onClick:()=>vote(o, p, v)}, ic)))),
-      h("span",{class:"grow"}),
-      o.status==="passed" ? h("button",{class:"btn sm ghost", onClick:()=>store.update("dinners", o.id, {status:"option"}, `brought back ${o.name} for ${fmt(o.night)}`)}, "Bring back") :
-      isChosen ? h("button",{class:"btn sm ghost", onClick:()=>choose(o, nd, false)}, "Unchoose") :
-      [h("button",{class:"btn sm ghost", title:"Hide it", onClick:()=>store.update("dinners", o.id, {status:"passed"}, `passed on ${o.name} for ${fmt(o.night)}`)}, "Pass"),
-       h("button",{class:"btn sm sage", onClick:()=>choose(o, nd, true)}, "Choose ✓")]),
+    action ? h("div",{class:"dc-foot"}, h("span",{class:"grow"}), action) : null,
   );
 }
 
-async function vote(o, who, v){
-  const key = "vote"+who, next = o[key]===v ? "" : v;
-  await store.update("dinners", o.id, {[key]: next}, next ? `${VOTES.find(x=>x[0]===next)[1]} ${o.name} for ${fmt(o.night)}` : null);
-}
 async function choose(o, nd, on){
   const date = o.night, tripId = "dinner-"+date;
   if (on){
@@ -122,7 +150,7 @@ async function choose(o, nd, on){
       conf: nd.conf||"", link: o.site||o.maps||"", order: 5000});
     toast(`${o.name} is on the itinerary`);
   } else {
-    await store.set("nights", date, {...nd, date, chosen:""}, `unchose ${o.name} for ${fmt(date)}`);
+    await store.set("nights", date, {...nd, date, chosen:""}, `reopened the ${fmt(date)} dinner choice`);
     if (store.getOne("trip", tripId)) await store.remove("trip", tripId);
   }
 }
@@ -145,6 +173,8 @@ async function editOption(o, preset={}){
     fields:[
       {name:"name", label:"Restaurant", placeholder:"e.g. Mani Mani"},
       {name:"night", label:"Night", type:"select", options:nightOpts, value: preset.night},
+      {name:"tier", label:"Where it sits", type:"select", options:Object.entries(TIERS).map(([v,l])=>({value:v, label:l})), value: preset.tier || "more"},
+      {name:"rank", label:"Order within that group (1 = first)", type:"number", inputmode:"numeric", placeholder:"1"},
       {name:"cuisine", label:"Cuisine", placeholder:"Modern Greek · Taverna · Seafood"},
       {name:"area", label:"Area", placeholder:"Koukaki · Plaka · Oia"},
       {name:"walk", label:"Distance from the hotel", placeholder:"5 min walk · 15 min drive"},
@@ -161,7 +191,7 @@ async function editOption(o, preset={}){
     ], values: o, submit: o ? "Save" : "Add", danger: o ? "Delete" : null,
     onDanger: async ()=>{ if (await confirmBox(`Delete ${o.name}?`)) store.remove("dinners", o.id, `removed ${o.name} from ${fmt(o.night)} dinner options`); } });
   if (!r || !r.name.trim()) return;
-  r.name = r.name.trim(); r.stop = stopOf(r.night)?.id || preset.stop || "";
+  r.name = r.name.trim(); r.stop = stopOf(r.night)?.id || preset.stop || ""; r.rank = Number(r.rank) || 99;
   if (o) await store.update("dinners", o.id, r, `updated ${r.name}`);
-  else { await store.add("dinners", {...r, status:"option", pick:false, voteAlly:"", voteAlex:"", order: Date.now()}, `added ${r.name} as a dinner option for ${fmt(r.night)}`); toast("Added"); }
+  else { await store.add("dinners", {...r, shortlisted:false, order: Date.now()}, `added ${r.name} as a dinner option for ${fmt(r.night)}`); toast("Added"); }
 }
