@@ -1,8 +1,8 @@
 /* Honeymoon → Dinners: pick where to eat each night of the trip, in three steps.
    nights/{date}  = {date, stop, vibe, time, conf, notes, chosen}
    dinners/{id}   = {night, stop, name, area, cuisine, walk, price, hours, tldr, chicken, tags, maps, site, menu, reserve, notes,
-                     tier: "ally" (Ally's two) | "claude" (Claude's four) | "more" (bench), rank, shortlisted (Alex's 2 of Claude's 4)}
-   Step 1: Alex shortlists 2 of Claude's four.  Step 2: Ally chooses from the final four (her two + Alex's two).  Step 3: reserve.
+                     tier: "ally" (up to 4 from Ally's list) | "claude" (Claude's four) | "more" (bench), rank, shortlisted}
+   Step 1: Alex shortlists 2 of Ally's and 2 of Claude's.  Step 2: Ally chooses from that final four.  Step 3: reserve.
    Choosing writes trip/dinner-{date} so it shows up in Days, Board and the hour view. */
 import { store } from "../store.js";
 import { h, fmt, addDays, time12, modal, confirmBox, toast } from "../util.js";
@@ -10,7 +10,7 @@ import { STOPS, TRIP_START, TRIP_END } from "../../data/seed.js";
 
 const HOTEL = {ath1:"COCO-MAT", jtr:"Cavo Tagoo", chq:"Residenza Vranas", ath2:"Zeus Dolce"};
 const PRICES = ["€","€€","€€€","€€€€"];
-const TIERS = {ally:"Ally's two", claude:"Claude's four", more:"Bench (more options)"};
+const TIERS = {ally:"Ally's list (up to 4)", claude:"Claude's four", more:"Bench (more options)"};
 let sel = null;
 let rerender = ()=>{};
 export function onRerender(fn){ rerender = fn; }
@@ -36,11 +36,12 @@ function funnel(date){
   const ally = opts.filter(o=>o.tier==="ally").sort(byRank);
   const claude = opts.filter(o=>o.tier==="claude").sort(byRank);
   const bench = opts.filter(o=>!o.tier || o.tier==="more").sort(byRank);
-  const picked = claude.filter(o=>o.shortlisted);
+  const pickedAlly = ally.filter(o=>o.shortlisted), pickedClaude = claude.filter(o=>o.shortlisted);
+  const needAlly = Math.min(2, ally.length), needClaude = Math.min(2, claude.length);
   const chosen = opts.find(o=>o.id===nd.chosen);
-  const stage = chosen ? 3 : (picked.length >= 2 ? 2 : 1);
-  const finalFour = [...ally, ...picked];
-  return {nd, opts, ally, claude, bench, picked, chosen, stage, finalFour};
+  const stage = chosen ? 3 : (pickedAlly.length >= needAlly && pickedClaude.length >= needClaude && (needAlly+needClaude) > 0 ? 2 : 1);
+  const finalFour = [...pickedAlly, ...pickedClaude];
+  return {nd, opts, ally, claude, bench, pickedAlly, pickedClaude, needAlly, needClaude, chosen, stage, finalFour};
 }
 
 export function view(){
@@ -89,19 +90,19 @@ export function view(){
     const rest = f.finalFour.filter(o=>o.id!==f.chosen.id);
     if (rest.length) wrap.append(h("details",{class:"passed"}, h("summary",null, `The other ${rest.length} from the final four`), h("div",{class:"dgrid"}, rest.map(o=>card(o, f, s)))));
   } else if (f.stage === 2){
-    wrap.append(section("Final four", "Ally's two plus the two Alex shortlisted. Ally taps Choose on the winner.", f.finalFour.map(o=>card(o, f, s))));
-    const rest = f.claude.filter(o=>!o.shortlisted);
-    if (rest.length) wrap.append(h("details",{class:"passed"}, h("summary",null, `${rest.length} of Claude's four not shortlisted`), h("div",{class:"dgrid"}, rest.map(o=>card(o, f, s)))));
+    wrap.append(section("Final four", "Two from Ally's list and two of Claude's, shortlisted by Alex. Ally taps Choose on the winner.", f.finalFour.map(o=>card(o, f, s))));
+    const rest = [...f.ally, ...f.claude].filter(o=>!o.shortlisted);
+    if (rest.length) wrap.append(h("details",{class:"passed"}, h("summary",null, `${rest.length} not shortlisted`), h("div",{class:"dgrid"}, rest.map(o=>card(o, f, s)))));
   } else {
-    wrap.append(section("Ally's two", f.ally.length ? "Straight through to the final four." : "Nothing from Ally's Google Maps list fits this night.", f.ally.map(o=>card(o, f, s))));
-    wrap.append(section("Claude's four", `Alex shortlists two · ${f.picked.length} of 2 picked`, f.claude.map(o=>card(o, f, s))));
+    wrap.append(section("Ally's list", f.ally.length ? `Alex shortlists ${f.needAlly} · ${f.pickedAlly.length} of ${f.needAlly} picked` : "Nothing from Ally's Google Maps list fits this night.", f.ally.map(o=>card(o, f, s))));
+    wrap.append(section("Claude's four", `Alex shortlists ${f.needClaude} · ${f.pickedClaude.length} of ${f.needClaude} picked`, f.claude.map(o=>card(o, f, s))));
   }
   if (f.bench.length) wrap.append(h("details",{class:"passed"}, h("summary",null, `Bench · ${f.bench.length} more option${f.bench.length>1?"s":""} (edit one to move it up)`), h("div",{class:"dgrid"}, f.bench.map(o=>card(o, f, s)))));
   return wrap;
 }
 
 function steps(f){
-  const st = [["1","Alex shortlists 2 of Claude's four"],["2","Ally picks from the final four"],["3","Reserve it"]];
+  const st = [["1","Alex shortlists 2 of Ally's + 2 of Claude's"],["2","Ally picks from the final four"],["3","Reserve it"]];
   return h("div",{class:"steps"}, st.map(([n,l],i)=>h("span",{class:"step"+(f.stage===i+1?" on":"")+(f.stage>i+1?" done":"")}, h("b",null, f.stage>i+1 ? "✓" : n), l)));
 }
 function section(title, sub, cards){
@@ -118,8 +119,9 @@ function card(o, f, s){
   let action = null;
   if (isChosen) action = h("button",{class:"btn sm ghost", onClick:()=>choose(o, f.nd, false)}, "Change");
   else if (f.stage===2 && inFinal) action = h("button",{class:"btn sm sage", disabled: me!=="Ally", title: me!=="Ally" ? "Ally's call" : "", onClick:()=>choose(o, f.nd, true)}, me==="Ally" ? "Choose ✓" : "Ally chooses");
-  else if (o.tier==="claude" && f.stage<3){
-    const full = f.picked.length>=2 && !o.shortlisted;
+  else if ((o.tier==="claude" || o.tier==="ally") && f.stage<3){
+    const picked = o.tier==="ally" ? f.pickedAlly : f.pickedClaude;
+    const full = picked.length>=2 && !o.shortlisted;
     action = h("button",{class:"btn sm "+(o.shortlisted ? "primary" : "ghost"), disabled: me!=="Alex" || full, title: me!=="Alex" ? "Alex's call" : full ? "Two already shortlisted" : "",
       onClick:()=>store.update("dinners", o.id, {shortlisted: !o.shortlisted}, `${o.shortlisted ? "dropped" : "shortlisted"} ${o.name} for ${fmt(o.night)}`)}, o.shortlisted ? "★ Shortlisted" : "☆ Shortlist");
   }
